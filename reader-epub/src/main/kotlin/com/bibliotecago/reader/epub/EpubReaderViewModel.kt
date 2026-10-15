@@ -13,6 +13,7 @@ import com.bibliotecago.library.Bookmark
 import com.bibliotecago.library.bookmarks
 import com.bibliotecago.library.readingProgress
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,9 +22,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.positions
+import org.readium.r2.shared.publication.services.search.SearchIterator
+import org.readium.r2.shared.publication.services.search.SearchService
+import org.readium.r2.shared.publication.services.search.search
+import org.readium.r2.shared.util.Try
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
@@ -36,7 +42,17 @@ sealed interface ReaderState {
     data class Failed(val message: String) : ReaderState
 }
 
-enum class ReaderPanel { None, Text, Contents, Bookmarks }
+enum class ReaderPanel { None, Text, Contents, Bookmarks, Search }
+
+/** Búsqueda en curso: resultados encontrados hasta ahora, en orden de lectura. */
+data class SearchState(
+    val query: SearchQuery,
+    val results: List<Locator> = emptyList(),
+    val loading: Boolean = true,
+    /** Ya se ha recorrido el libro entero. */
+    val done: Boolean = false,
+    val error: String? = null,
+)
 
 /**
  * Abre el EPUB con Readium y guarda la posición en cada cambio de página. Vive
@@ -138,7 +154,91 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
         viewModelScope.launch { bookmarkStore.delete(bookmark) }
     }
 
+    /** Lo escrito en el buscador; se conserva al cerrar el panel. */
+    var searchInput by mutableStateOf("")
+
+    var search by mutableStateOf<SearchState?>(null)
+        private set
+
+    /** Resultado al que se ha saltado: se subraya en la página. */
+    var searchSelected by mutableStateOf<Locator?>(null)
+
+    private var searchIterator: SearchIterator? = null
+    private var searchJob: Job? = null
+
+    /** Empieza una búsqueda nueva; sin texto, borra la anterior. */
+    @OptIn(ExperimentalReadiumApi::class)
+    fun search(query: String = searchInput) {
+        val publication = (state.value as? ReaderState.Ready)?.publication ?: return
+        val parsed = SearchQuery.parse(query)
+        stopSearch()
+        searchSelected = null
+        if (parsed == null) {
+            search = null
+            return
+        }
+        search = SearchState(parsed)
+        searchJob = viewModelScope.launch {
+            val options = if (parsed.literal) {
+                SearchService.Options(caseSensitive = true, diacriticSensitive = true, wholeWord = true)
+            } else {
+                SearchService.Options(caseSensitive = false, diacriticSensitive = false, wholeWord = false)
+            }
+            val iterator = publication.search(parsed.text, options)
+            if (iterator == null) {
+                search = SearchState(parsed, loading = false, done = true, error = "Este libro no permite buscar.")
+                return@launch
+            }
+            searchIterator = iterator
+            loadResults(iterator)
+        }
+    }
+
+    /** Sigue recorriendo el libro: la lista pide más al acercarse al final. */
+    fun loadMoreResults() {
+        val current = search ?: return
+        val iterator = searchIterator ?: return
+        if (current.loading || current.done) return
+        search = current.copy(loading = true)
+        searchJob = viewModelScope.launch { loadResults(iterator) }
+    }
+
+    /**
+     * Readium da los resultados capítulo a capítulo; se avanza hasta tener una
+     * tanda o acabar el libro, mostrando lo que va saliendo.
+     */
+    @OptIn(ExperimentalReadiumApi::class)
+    private suspend fun loadResults(iterator: SearchIterator) {
+        var found = 0
+        while (found < SEARCH_BATCH) {
+            when (val result = withContext(Dispatchers.Default) { iterator.next() }) {
+                is Try.Success -> {
+                    val locators = result.value?.locators
+                    if (locators == null) {
+                        search = search?.copy(loading = false, done = true)
+                        return
+                    }
+                    found += locators.size
+                    search = search?.let { it.copy(results = it.results + locators) }
+                }
+                is Try.Failure -> {
+                    search = search?.copy(loading = false, done = true, error = "No se ha podido buscar en todo el libro.")
+                    return
+                }
+            }
+        }
+        search = search?.copy(loading = false)
+    }
+
+    private fun stopSearch() {
+        searchJob?.cancel()
+        searchJob = null
+        searchIterator?.close()
+        searchIterator = null
+    }
+
     override fun onCleared() {
+        stopSearch()
         (_state.value as? ReaderState.Ready)?.publication?.close()
     }
 
@@ -148,6 +248,7 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
         const val EXTRA_TITLE = "title"
 
         private const val BOOKMARK_TEXT = 160
+        private const val SEARCH_BATCH = 30
     }
 }
 

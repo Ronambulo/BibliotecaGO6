@@ -96,6 +96,107 @@ object EinkIcons {
     /** Marcador relleno: la página ya está marcada. */
     val BookmarkFilled = icon("BookmarkFilled", filled = true) { bookmark() }
 
+    val ChevronDown = icon("ChevronDown") {
+        moveTo(6f, 9f); lineTo(12f, 15f); lineTo(18f, 9f)
+    }
+    val Plus = icon("Plus") {
+        moveTo(12f, 5f); lineTo(12f, 19f)
+        moveTo(5f, 12f); lineTo(19f, 12f)
+    }
+    val Minus = icon("Minus") {
+        moveTo(5f, 12f); lineTo(19f, 12f)
+    }
+    val Trash = icon("Trash") {
+        moveTo(4f, 7f); lineTo(20f, 7f)
+        moveTo(9.5f, 7f); lineTo(9.5f, 4f); lineTo(14.5f, 4f); lineTo(14.5f, 7f)
+        moveTo(6.5f, 7f); lineTo(7.5f, 20f); lineTo(16.5f, 20f); lineTo(17.5f, 7f)
+        moveTo(10.5f, 11f); lineTo(10.5f, 16f)
+        moveTo(13.5f, 11f); lineTo(13.5f, 16f)
+    }
+    /** Libro abierto: leer. */
+    val Book = icon("Book") {
+        moveTo(2.5f, 5f)
+        curveTo(5.5f, 3.5f, 9.5f, 3.5f, 12f, 6f)
+        curveTo(14.5f, 3.5f, 18.5f, 3.5f, 21.5f, 5f)
+        lineTo(21.5f, 19f)
+        curveTo(18.5f, 17.5f, 14.5f, 17.5f, 12f, 20f)
+        curveTo(9.5f, 17.5f, 5.5f, 17.5f, 2.5f, 19f)
+        close()
+        moveTo(12f, 6f); lineTo(12f, 20f)
+    }
+    /** Índice: líneas con sangría. */
+    val Toc = icon("Toc") {
+        moveTo(4f, 6f); lineTo(20f, 6f)
+        moveTo(8f, 10f); lineTo(20f, 10f)
+        moveTo(8f, 14f); lineTo(20f, 14f)
+        moveTo(4f, 18f); lineTo(20f, 18f)
+    }
+    /** «Aa»: ajustes de texto. */
+    val Text = icon("Text") {
+        moveTo(2.5f, 19f); lineTo(8f, 5f); lineTo(13.5f, 19f)
+        moveTo(4.6f, 14f); lineTo(11.4f, 14f)
+        moveTo(21.5f, 12f); lineTo(21.5f, 19f)
+        moveTo(21.5f, 15.5f)
+        arcTo(3f, 3.5f, 0f, true, true, 15.5f, 15.5f)
+        arcTo(3f, 3.5f, 0f, true, true, 21.5f, 15.5f)
+    }
+    /** Hoja con número: ir a página. */
+    val Page = icon("Page") {
+        moveTo(6f, 3f); lineTo(14f, 3f); lineTo(19f, 8f); lineTo(19f, 21f); lineTo(6f, 21f); close()
+        moveTo(14f, 3f); lineTo(14f, 8f); lineTo(19f, 8f)
+        moveTo(9f, 13f); lineTo(16f, 13f)
+        moveTo(9f, 17f); lineTo(14f, 17f)
+    }
+    /** Marco con esquinas: ajuste de la vista. */
+    val View = icon("View") {
+        moveTo(4f, 9f); lineTo(4f, 4f); lineTo(9f, 4f)
+        moveTo(15f, 4f); lineTo(20f, 4f); lineTo(20f, 9f)
+        moveTo(20f, 15f); lineTo(20f, 20f); lineTo(15f, 20f)
+        moveTo(9f, 20f); lineTo(4f, 20f); lineTo(4f, 15f)
+    }
+    val Backspace = icon("Backspace") {
+        moveTo(9f, 5f); lineTo(21f, 5f); lineTo(21f, 19f); lineTo(9f, 19f); lineTo(2.5f, 12f); close()
+        moveTo(12f, 9f); lineTo(17f, 15f)
+        moveTo(17f, 9f); lineTo(12f, 15f)
+    }
+    val Server = icon("Server") {
+        rect(3.5f, 4f, 20.5f, 10.5f)
+        rect(3.5f, 13.5f, 20.5f, 20f)
+        moveTo(7f, 7.25f); lineTo(8f, 7.25f)
+        moveTo(7f, 16.75f); lineTo(8f, 16.75f)
+    }
+    val Info = icon("Info") {
+        circle(12f, 12f, 9f)
+        moveTo(12f, 11f); lineTo(12f, 16.5f)
+        moveTo(12f, 7.5f); lineTo(12f, 7.6f)
+    }
+    val User = icon("User") {
+        circle(12f, 8f, 4f)
+        moveTo(4f, 21f)
+        curveTo(4f, 16.5f, 7.5f, 14f, 12f, 14f)
+        curveTo(16.5f, 14f, 20f, 16.5f, 20f, 21f)
+    }
+    val Tag = icon("Tag") {
+        moveTo(3.5f, 3.5f); lineTo(11.5f, 3.5f); lineTo(20.5f, 12.5f); lineTo(12.5f, 20.5f); lineTo(3.5f, 11.5f); close()
+        moveTo(8f, 8f); lineTo(8f, 8.1f)
+    }
+    /** Libros apilados: serie. */
+    val Series = icon("Series") {
+        rect(4f, 15f, 20f, 20f)
+        rect(5.5f, 10f, 18.5f, 15f)
+        rect(7f, 5f, 17f, 10f)
+    }
+    val Refresh = icon("Refresh") {
+        moveTo(19.5f, 12f)
+        arcTo(7.5f, 7.5f, 0f, true, true, 17f, 6.4f)
+        moveTo(17.5f, 2.5f); lineTo(17.5f, 6.8f); lineTo(13.2f, 6.8f)
+    }
+    val Warning = icon("Warning") {
+        moveTo(12f, 3.5f); lineTo(21.5f, 20f); lineTo(2.5f, 20f); close()
+        moveTo(12f, 10f); lineTo(12f, 14f)
+        moveTo(12f, 17f); lineTo(12f, 17.1f)
+    }
+
     private fun PathBuilder.bookmark() {
         moveTo(6.5f, 3.5f); lineTo(17.5f, 3.5f); lineTo(17.5f, 20.5f); lineTo(12f, 16f); lineTo(6.5f, 20.5f); close()
     }
@@ -116,6 +217,12 @@ object EinkIcons {
             pathBuilder = block,
         ).build()
 
+    private fun PathBuilder.circle(cx: Float, cy: Float, r: Float) {
+        moveTo(cx + r, cy)
+        arcTo(r, r, 0f, true, true, cx - r, cy)
+        arcTo(r, r, 0f, true, true, cx + r, cy)
+    }
+
     private fun PathBuilder.rect(left: Float, top: Float, right: Float, bottom: Float) {
         moveTo(left, top); lineTo(right, top); lineTo(right, bottom); lineTo(left, bottom); close()
     }
@@ -127,7 +234,7 @@ fun EinkIcon(
     icon: ImageVector,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    size: Dp = 26.dp,
+    size: Dp = 24.dp,
 ) {
     Image(
         imageVector = icon,

@@ -1,6 +1,7 @@
 package com.bibliotecago.core.eink
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -17,13 +18,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 
 /*
  * Diálogos y menús se dibujan dentro de la propia ventana de la actividad en
  * lugar de abrir una ventana nueva (Dialog/Popup), porque esas ventanas traen
- * animaciones de entrada y salida del sistema. Tampoco hay velo semitransparente:
- * el contenido de detrás se queda tal cual y el diálogo se separa con un borde grueso.
+ * animaciones de entrada y salida del sistema. Un velo gris fijo (sin fundido)
+ * separa el diálogo o la hoja del contenido de detrás.
  */
 
 private class OverlayEntry(val content: @Composable () -> Unit)
@@ -55,6 +57,7 @@ internal fun EinkOverlayHost(content: @Composable () -> Unit) {
 fun EinkOverlay(
     onDismissRequest: () -> Unit,
     contentAlignment: Alignment = Alignment.Center,
+    scrim: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val state = LocalOverlayState.current
@@ -66,6 +69,7 @@ fun EinkOverlay(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .then(if (scrim) Modifier.background(Scrim) else Modifier)
                     .clickable(interactionSource = null, indication = null) { currentDismiss() },
                 contentAlignment = contentAlignment,
             ) {
@@ -78,6 +82,8 @@ fun EinkOverlay(
         onDispose { state.entries -= entry }
     }
 }
+
+private val Scrim = Color(0x73000000)
 
 /** Evita que un toque dentro de la tarjeta del diálogo lo cierre. */
 internal fun Modifier.consumeTaps(): Modifier = pointerInput(Unit) { detectTapGestures { } }

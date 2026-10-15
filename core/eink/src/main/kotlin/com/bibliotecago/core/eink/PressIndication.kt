@@ -4,27 +4,31 @@ import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.invalidateDraw
 import kotlinx.coroutines.launch
 
 /**
- * Sustituye al ripple: mientras el elemento está pulsado se invierte su
- * contenido de golpe (negro ↔ blanco), sin fundidos ni ondas.
+ * Sustituye al ripple: mientras el elemento está pulsado se dibuja un marco
+ * fino (tinta por fuera, papel por dentro) sin tocar el contenido. Las
+ * portadas no cambian de color y E Ink solo refresca el borde.
  */
-object InvertIndication : IndicationNodeFactory {
+object PressIndication : IndicationNodeFactory {
     override fun create(interactionSource: InteractionSource): DelegatableNode =
-        InvertNode(interactionSource)
+        PressNode(interactionSource)
 
     override fun equals(other: Any?): Boolean = other === this
     override fun hashCode(): Int = javaClass.hashCode()
 }
 
-private class InvertNode(
+private class PressNode(
     private val interactionSource: InteractionSource,
 ) : Modifier.Node(), DrawModifierNode {
 
@@ -50,6 +54,15 @@ private class InvertNode(
 
     override fun ContentDrawScope.draw() {
         drawContent()
-        if (pressed) drawRect(Color.White, blendMode = BlendMode.Difference)
+        if (!pressed) return
+        val outer = 3.dp.toPx()
+        val inner = 2.dp.toPx()
+        // El marco de papel separa el de tinta de un fondo negro (botón primario).
+        drawRect(INK, Offset(outer / 2, outer / 2), Size(size.width - outer, size.height - outer), style = Stroke(outer))
+        val o = outer + inner / 2
+        drawRect(PAPER, Offset(o, o), Size(size.width - 2 * o, size.height - 2 * o), style = Stroke(inner))
     }
 }
+
+private val INK = Color.Black
+private val PAPER = Color.White

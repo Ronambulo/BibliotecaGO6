@@ -75,7 +75,7 @@ Objetivo: interfaz navegable con datos ficticios, validada en E Ink. Cubre la ba
 
 ### Capa de componentes E Ink (§5.4)
 - [x] Tema monocromo propio (tipografía, colores, formas) sin depender de Material por defecto.
-- [x] Desactivar ripple globalmente (`LocalIndication` / indicación propia con inversión instantánea).
+- [x] Desactivar ripple globalmente (`LocalIndication` / indicación propia: un marco fino instantáneo al pulsar, sin invertir colores).
 - [x] Navegación sin transiciones (`EnterTransition.None` / `ExitTransition.None`).
 - [x] Componentes propios: botón, botón de icono, tarjeta, barra inferior, diálogo, menú, campo de texto, interruptor.
 - [x] Componente de **paginador** (cuadrícula y lista) con indicador «3 / 41» y paso por toque o gesto.
@@ -147,7 +147,7 @@ Objetivo: conectar con la biblioteca real. Cubre RF-01 a RF-05 y RF-09.
 Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 
 ### Base común
-- [ ] Pantalla de lector a pantalla completa, sin barra inferior.
+- [x] Pantalla de lector a pantalla completa, sin barra inferior. *Los dos lectores ocultan la barra de estado y la de navegación; se asoman deslizando desde el borde, por encima del texto, y se vuelven a ocultar. Sin probar en el BOOX.*
 - [x] Controles que aparecen y se ocultan al tocar el centro, en un menú abajo (volver, título, capítulo, página y porcentaje). Probado en el BOOX.
 - [x] Paso de página por toque en los laterales y por deslizamiento, **sin animación** (el deslizamiento de Readium se intercepta y pasa página de golpe). Probado en el BOOX.
 - [x] Esquema Room para progreso (`Locator` de Readium + fecha) y marcadores, preparado para sincronizar en el futuro (ids estables, `updatedAt`). En `:library` (`library.db`): `reading_progress` y `bookmarks` (id UUID, `updatedAt`); migración automática 1→2 que conserva el progreso.
@@ -157,7 +157,7 @@ Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 - [x] Preferencias: tamaño de letra, fuente, márgenes, interlineado, tema claro (y oscuro si se ve bien). Panel «Texto» en el menú, común a todos los libros. Probado en el BOOX.
 - [x] Tabla de contenidos: «Índice» paginado, abre en el capítulo actual. Probado en el BOOX.
 - [x] Marcadores: crear, listar, saltar y eliminar. Botón de marcador en el menú (relleno si la página ya está marcada; tocarlo otra vez lo quita) y pestaña «Marcadores» junto al «Índice», con capítulo, texto, página y porcentaje; borrar pide confirmación. *Sin probar en el BOOX.*
-- [ ] Búsqueda de texto dentro del libro.
+- [x] Búsqueda de texto dentro del libro. Botón «Buscar» en el menú: resultados paginados con el texto de alrededor (la coincidencia en negrita), capítulo, página y porcentaje; se cargan por tandas al avanzar. Al saltar a uno queda subrayado en la página. Sin comillas no distingue mayúsculas ni acentos; entre comillas busca el texto tal cual, con palabras enteras. *Sin probar en el BOOX.*
 - [x] Barra de progreso discreta y última posición recordada: capítulo, página y porcentaje en el menú; la posición se guarda en cada cambio de página. Probado en el BOOX.
 
 ### Lector PDF (RF-07)
@@ -168,9 +168,9 @@ Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 - [ ] Renderizado fuera del hilo principal; probar con PDF técnicos pesados reales. *Se pinta en segundo plano y se deja lista la página siguiente; falta probar con PDF pesados.*
 
 ### Continuar leyendo (RF-08)
-- [ ] Bloque «Continuar leyendo» en Inicio con datos reales.
-- [ ] Progreso persistente tras cerrar la app y reiniciar el dispositivo.
-- [ ] Pruebas del repositorio de progreso y marcadores.
+- [x] Bloque «Continuar leyendo» en Inicio con datos reales: el último libro leído en grande y hasta 3 libros empezados más debajo, solo si siguen descargados. Abre el lector directamente. *Sin probar en el BOOX.*
+- [ ] Progreso persistente tras cerrar la app y reiniciar el dispositivo. *Se guarda en Room (`library.db`) y una prueba comprueba que sigue al cerrar y volver a abrir la base de datos; falta probar un reinicio de verdad en el BOOX.*
+- [x] Pruebas del repositorio de progreso y marcadores. Pruebas instrumentadas en `:library` con SQLite real (`connectedDebugAndroidTest`, en el emulador): guardar y sobrescribir progreso, un progreso por formato, orden de «Continuar leyendo», marcadores en orden de lectura y borrado, reapertura de la base de datos y migración 1→2 sin perder el progreso.
 
 ### Ajuste E Ink
 - [ ] Revisar refresco y gestos en el BOOX; ajustar zonas táctiles.
@@ -180,9 +180,11 @@ Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 
 ---
 
-## Fase 4 · Seguridad y uso remoto
+## Fase 4 · Seguridad y uso remoto *(pospuesta)*
 
 Objetivo: usar la app fuera de casa con garantías. Cubre §10.3.
+
+> **Pospuesta:** se salta por ahora y se retomará más adelante, antes de la v1.0.
 
 - [ ] Pruebas por el túnel desde datos móviles o Wi-Fi externa.
 - [ ] Verificar que la conmutación local ↔ túnel funciona al salir y volver a casa.

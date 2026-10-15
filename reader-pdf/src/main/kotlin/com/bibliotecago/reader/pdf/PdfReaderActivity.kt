@@ -16,6 +16,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
+import com.bibliotecago.core.eink.EinkEyebrow
+import com.bibliotecago.core.eink.EinkIcon
+import com.bibliotecago.core.eink.EinkProgressBar
+import com.bibliotecago.core.eink.EinkSegmented
+import com.bibliotecago.core.eink.EinkSurface
+import com.bibliotecago.core.eink.EinkTone
+import com.bibliotecago.core.eink.einkBorder
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,18 +51,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.bibliotecago.core.eink.EinkButton
 import com.bibliotecago.core.eink.EinkDivider
 import com.bibliotecago.core.eink.EinkIconButton
 import com.bibliotecago.core.eink.EinkIcons
 import com.bibliotecago.core.eink.EinkMessage
 import com.bibliotecago.core.eink.EinkText
-import com.bibliotecago.core.eink.EinkTextField
 import com.bibliotecago.core.eink.EinkTheme
+import com.bibliotecago.core.eink.hideSystemBars
 import com.bibliotecago.core.eink.EinkTopBar
 import com.bibliotecago.core.model.BookId
 import java.io.File
@@ -55,7 +71,7 @@ import kotlin.math.roundToInt
 /**
  * Lector PDF. Cada página se pinta como imagen y se muestra entera o, al
  * ancho, por trozos. Toques en los bordes y deslizamientos pasan pantalla sin
- * animación; un toque en el centro muestra el menú de arriba.
+ * animación; un toque en el centro muestra el menú.
  */
 class PdfReaderActivity : ComponentActivity() {
 
@@ -64,6 +80,7 @@ class PdfReaderActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { EinkTheme { Reader() } }
+        hideSystemBars()
         onBackPressedDispatcher.addCallback(this) {
             when {
                 viewModel.panel != PdfPanel.None -> viewModel.panel = PdfPanel.None
@@ -71,6 +88,11 @@ class PdfReaderActivity : ComponentActivity() {
                 else -> finish()
             }
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideSystemBars()
     }
 
     // Teclado o mando: flechas y avance/retroceso de página.
@@ -89,15 +111,17 @@ class PdfReaderActivity : ComponentActivity() {
         val state by viewModel.state.collectAsState()
         Box(Modifier.fillMaxSize().background(EinkTheme.colors.paper)) {
             when (val s = state) {
-                PdfState.Opening -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EinkMessage("Abriendo libro…")
-                }
+                // Página en blanco hasta que se pinta la primera: sin mensajes intermedios.
+                PdfState.Opening -> Unit
                 is PdfState.Failed -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EinkMessage("No se puede leer", message = s.message, actionLabel = "Volver", onAction = ::finish)
+                    EinkMessage("No se puede leer", message = s.message, icon = EinkIcons.Warning, actionLabel = "Volver", onAction = ::finish)
                 }
                 is PdfState.Ready -> {
                     Page(Modifier.fillMaxSize())
-                    if (viewModel.controlsVisible) Controls(s.pageCount, Modifier.align(Alignment.TopCenter))
+                    if (viewModel.controlsVisible) {
+                        TopStrip(Modifier.align(Alignment.TopCenter))
+                        Controls(s.pageCount, Modifier.align(Alignment.BottomCenter))
+                    }
                     if (viewModel.panel == PdfPanel.GoTo) GoToPage(s.pageCount)
                 }
             }
@@ -168,49 +192,100 @@ class PdfReaderActivity : ComponentActivity() {
         }
     }
 
-    /** Menú arriba: botones, página y, si están abiertos, los ajustes de vista. */
+    /** Franja de arriba: volver y título. */
     @Composable
-    private fun Controls(pageCount: Int, modifier: Modifier) {
+    private fun TopStrip(modifier: Modifier) {
         Column(modifier.fillMaxWidth().background(EinkTheme.colors.paper).blockTouches()) {
             Row(
-                Modifier.fillMaxWidth().height(EinkTheme.dimens.touchTarget + 8.dp).padding(horizontal = 4.dp),
+                Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 EinkIconButton(EinkIcons.Back, contentDescription = "Cerrar libro", onClick = ::finish)
-                Spacer(Modifier.width(4.dp))
-                EinkText(viewModel.title, Modifier.weight(1f), style = EinkTheme.typography.heading, maxLines = 1)
-                EinkIconButton(EinkIcons.List, contentDescription = "Ir a página", onClick = { viewModel.panel = PdfPanel.GoTo })
-                EinkIconButton(
-                    EinkIcons.Settings,
-                    contentDescription = "Vista",
-                    onClick = { viewModel.panel = if (viewModel.panel == PdfPanel.View) PdfPanel.None else PdfPanel.View },
-                    selected = viewModel.panel == PdfPanel.View,
-                )
+                Spacer(Modifier.width(12.dp))
+                EinkText(viewModel.title, Modifier.weight(1f), style = EinkTheme.typography.label, maxLines = 2)
             }
             EinkDivider()
-            Row(Modifier.fillMaxWidth().padding(horizontal = EinkTheme.dimens.gutter, vertical = 12.dp)) {
-                EinkText(
-                    "Página ${viewModel.position.page + 1} de $pageCount",
-                    Modifier.weight(1f),
-                    style = EinkTheme.typography.caption,
-                )
-                EinkText("${(viewModel.progression * 100).roundToInt()} %", style = EinkTheme.typography.caption)
-            }
-            if (viewModel.panel == PdfPanel.View) {
-                EinkDivider()
-                ViewSettings()
-            }
-            EinkDivider(thickness = EinkTheme.dimens.border)
         }
     }
 
+    /** Menú abajo: ajustes de vista si están abiertos, página, progreso y herramientas. */
+    @Composable
+    private fun Controls(pageCount: Int, modifier: Modifier) {
+        Column(modifier.fillMaxWidth().blockTouches()) {
+            if (viewModel.panel == PdfPanel.View) ViewSettings() else EinkDivider()
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(EinkTheme.colors.paper)
+                    .padding(horizontal = EinkTheme.dimens.gutter)
+                    .padding(top = 14.dp, bottom = 12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    EinkText(
+                        buildAnnotatedString {
+                            append("Página ")
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("${viewModel.position.page + 1}") }
+                            append(" de $pageCount")
+                        },
+                        Modifier.weight(1f),
+                        style = EinkTheme.typography.label,
+                    )
+                    EinkText(
+                        "${(viewModel.progression * 100).roundToInt()} %",
+                        style = EinkTheme.typography.caption,
+                        color = EinkTheme.colors.muted,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                EinkProgressBar(viewModel.progression.toFloat(), Modifier.fillMaxWidth(), height = 6.dp)
+                Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Tool(EinkIcons.Page, "Ir a página") { viewModel.panel = PdfPanel.GoTo }
+                    Tool(EinkIcons.View, "Vista", selected = viewModel.panel == PdfPanel.View) {
+                        viewModel.panel = if (viewModel.panel == PdfPanel.View) PdfPanel.None else PdfPanel.View
+                    }
+                }
+            }
+        }
+    }
+
+    /** Herramienta del menú: icono y etiqueta en una baldosa redondeada. */
+    @Composable
+    private fun RowScope.Tool(icon: ImageVector, label: String, selected: Boolean = false, onClick: () -> Unit) {
+        EinkSurface(
+            Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick),
+            corner = 16.dp,
+            tone = if (selected) EinkTone.Ink else EinkTone.Surface,
+        ) {
+            Row(
+                Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                EinkIcon(icon, null, size = 22.dp)
+                Spacer(Modifier.width(8.dp))
+                EinkText(label, style = EinkTheme.typography.label, maxLines = 1)
+            }
+        }
+    }
+
+    /** Hoja de ajustes de vista, sobre el menú. */
     @Composable
     private fun ViewSettings() {
         val settings = viewModel.settings
         Column(
-            Modifier.padding(EinkTheme.dimens.gutter),
-            verticalArrangement = Arrangement.spacedBy(EinkTheme.dimens.spacing),
+            Modifier
+                .fillMaxWidth()
+                .einkBorder(1.dp, EinkTheme.colors.line, 28.dp)
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(EinkTheme.colors.paper)
+                .padding(horizontal = EinkTheme.dimens.gutter, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                EinkText("Vista", Modifier.weight(1f), style = EinkTheme.typography.heading)
+                EinkIconButton(EinkIcons.Close, "Cerrar ajustes de vista", { viewModel.panel = PdfPanel.None })
+            }
             Choice("Ajuste", PdfFit.entries.map { it.label to it }, settings.fit) {
                 viewModel.updateSettings(settings.copy(fit = it))
             }
@@ -220,21 +295,22 @@ class PdfReaderActivity : ComponentActivity() {
         }
     }
 
-    /** Fila de opciones excluyentes; la elegida, rellena en negro. */
+    /** Opciones excluyentes en un control segmentado. */
     @Composable
     private fun <T> Choice(label: String, options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
         Column {
-            EinkText(label, style = EinkTheme.typography.caption)
-            Spacer(Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                options.forEach { (text, value) ->
-                    EinkButton(text, { onSelect(value) }, Modifier.weight(1f), primary = value == selected)
-                }
-            }
+            EinkEyebrow(label)
+            Spacer(Modifier.height(6.dp))
+            EinkSegmented(
+                options.map { it.first },
+                selectedIndex = options.indexOfFirst { it.second == selected },
+                onSelect = { onSelect(options[it].second) },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 
-    /** A pantalla completa y arriba, para que el teclado no tape el campo. */
+    /** A pantalla completa, con teclado numérico propio: sin el del sistema. */
     @Composable
     private fun GoToPage(pageCount: Int) {
         var text by rememberSaveable { mutableStateOf("") }
@@ -247,21 +323,71 @@ class PdfReaderActivity : ComponentActivity() {
             }
         }
         Column(Modifier.fillMaxSize().background(EinkTheme.colors.paper).blockTouches()) {
-            EinkTopBar(title = "Ir a página", onBack = { viewModel.panel = PdfPanel.None })
+            EinkTopBar(title = "Ir a página", onBack = { viewModel.panel = PdfPanel.None }, closeIcon = true)
             Column(
-                Modifier.padding(EinkTheme.dimens.gutter),
-                verticalArrangement = Arrangement.spacedBy(EinkTheme.dimens.spacing),
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = EinkTheme.dimens.gutter)
+                    .padding(bottom = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                EinkTextField(
-                    value = text,
-                    onValueChange = { value -> text = value.filter(Char::isDigit).take(6) },
-                    label = "Página (1–$pageCount)",
-                    placeholder = "${viewModel.position.page + 1}",
-                    keyboardType = KeyboardType.Number,
-                    onDone = { go() },
+                Spacer(Modifier.weight(1f))
+                EinkText(
+                    text.ifEmpty { "${viewModel.position.page + 1}" },
+                    style = EinkTheme.typography.title.copy(fontSize = 56.sp),
+                    color = if (text.isEmpty()) EinkTheme.colors.muted else EinkTheme.colors.ink,
                 )
-                EinkButton("Ir", { go() }, Modifier.fillMaxWidth(), primary = true, enabled = page != null)
+                EinkText(
+                    if (text.isNotEmpty() && page == null) "Elige una página entre 1 y $pageCount" else "de $pageCount páginas",
+                    style = EinkTheme.typography.body,
+                    color = EinkTheme.colors.muted,
+                )
+                Spacer(Modifier.weight(1f))
+                val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", BACKSPACE, "0", GO)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    keys.chunked(3).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            row.forEach { key ->
+                                val modifier = Modifier.weight(1f)
+                                when (key) {
+                                    BACKSPACE -> Key(modifier, "Borrar", enabled = text.isNotEmpty(), onClick = { text = text.dropLast(1) }) {
+                                        EinkIcon(EinkIcons.Backspace, null, size = 26.dp)
+                                    }
+                                    GO -> Key(modifier, "Ir", enabled = page != null, inverted = true, onClick = { go() }) {
+                                        EinkText("Ir", style = EinkTheme.typography.heading, color = EinkTheme.colors.paper)
+                                    }
+                                    else -> Key(modifier, key, onClick = { if (text.length < 6) text = (text + key).trimStart('0') }) {
+                                        EinkText(key, style = EinkTheme.typography.heading)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
+        }
+    }
+
+    @Composable
+    private fun Key(
+        modifier: Modifier,
+        description: String,
+        enabled: Boolean = true,
+        inverted: Boolean = false,
+        onClick: () -> Unit,
+        content: @Composable () -> Unit,
+    ) {
+        EinkSurface(
+            modifier
+                .height(64.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .clickable(enabled = enabled, onClickLabel = description, onClick = onClick)
+                .alpha(if (enabled) 1f else 0.35f),
+            corner = 18.dp,
+            tone = if (inverted) EinkTone.Ink else EinkTone.Surface,
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
         }
     }
 
@@ -273,6 +399,8 @@ class PdfReaderActivity : ComponentActivity() {
     companion object {
         /** Ancho de cada borde que pasa página, como fracción de la pantalla. */
         private const val EDGE = 0.3f
+        private const val BACKSPACE = "⌫"
+        private const val GO = "ir"
 
         fun intent(context: Context, file: File, bookId: BookId, title: String): Intent =
             Intent(context, PdfReaderActivity::class.java)

@@ -8,14 +8,18 @@ import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
 /** Datos de lectura guardados en el dispositivo (Room, `library.db`). */
-class LibraryStore(context: Context, clock: () -> Long = System::currentTimeMillis) {
+class LibraryStore internal constructor(database: LibraryDatabase, clock: () -> Long) {
 
-    private val database = Room.databaseBuilder(context.applicationContext, LibraryDatabase::class.java, "library.db")
-        .build()
+    constructor(context: Context, clock: () -> Long = System::currentTimeMillis) : this(
+        Room.databaseBuilder(context.applicationContext, LibraryDatabase::class.java, DATABASE_NAME).build(),
+        clock,
+    )
 
     val progress = ReadingProgressStore(database.progress(), clock)
     val bookmarks = BookmarkStore(database.bookmarks(), clock)
 }
+
+internal const val DATABASE_NAME = "library.db"
 
 /** Por dónde va cada libro. */
 class ReadingProgressStore internal constructor(private val dao: ReadingProgressDao, private val clock: () -> Long) {

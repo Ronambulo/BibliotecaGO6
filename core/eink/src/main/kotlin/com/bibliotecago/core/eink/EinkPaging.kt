@@ -6,17 +6,23 @@ import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,8 +30,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 /**
  * Página actual de una vista paginada (base 0). Sobrevive a la rotación y a
@@ -86,6 +99,8 @@ fun <T> EinkPagedGrid(
     key: ((T) -> Any)? = null,
     hasMore: Boolean = false,
     onLoadMore: () -> Unit = {},
+    spacing: Dp = EinkTheme.dimens.spacing,
+    contentPadding: PaddingValues = PaddingValues(horizontal = EinkTheme.dimens.gutter, vertical = 8.dp),
     itemContent: @Composable (T) -> Unit,
 ) {
     val perPage = columns * rows
@@ -108,13 +123,13 @@ fun <T> EinkPagedGrid(
                     onNext = { state.page = (state.page + 1).coerceAtMost(currentPageCount - 1) },
                     onPrevious = { state.page = (state.page - 1).coerceAtLeast(0) },
                 )
-                .padding(horizontal = EinkTheme.dimens.gutter, vertical = EinkTheme.dimens.spacing),
-            verticalArrangement = Arrangement.spacedBy(EinkTheme.dimens.spacing),
+                .padding(contentPadding),
+            verticalArrangement = Arrangement.spacedBy(spacing),
         ) {
             for (r in 0 until rows) {
                 Row(
                     Modifier.weight(1f).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(EinkTheme.dimens.spacing),
+                    horizontalArrangement = Arrangement.spacedBy(spacing),
                 ) {
                     for (c in 0 until columns) {
                         val item = pageItems.getOrNull(r * columns + c)
@@ -139,7 +154,7 @@ fun <T> EinkPagedGrid(
     }
 }
 
-/** Indicador «3 / 41» (o «3 / 7+» si quedan por cargar) con botones grandes de anterior y siguiente. */
+/** «Página 3 de 41» (o «de 7+» si quedan por cargar) entre dos botones redondos. */
 @Composable
 fun EinkPageIndicator(
     page: Int,
@@ -149,21 +164,25 @@ fun EinkPageIndicator(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth()) {
-        EinkDivider()
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            EinkIconButton(EinkIcons.ChevronLeft, "Página anterior", onPrevious, enabled = page > 0)
-            EinkText(
-                "${page + 1} / $pageCount${if (hasMore) "+" else ""}",
-                Modifier.weight(1f),
-                style = EinkTheme.typography.label,
-                textAlign = TextAlign.Center,
-            )
-            EinkIconButton(EinkIcons.ChevronRight, "Página siguiente", onNext, enabled = page < pageCount - 1)
-        }
+    Row(
+        modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        EinkIconButton(EinkIcons.ChevronLeft, "Página anterior", onPrevious, enabled = page > 0)
+        EinkText(
+            buildAnnotatedString {
+                append("Página ")
+                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("${page + 1}") }
+                append(" de $pageCount${if (hasMore) "+" else ""}")
+            },
+            Modifier.weight(1f),
+            style = EinkTheme.typography.body,
+            textAlign = TextAlign.Center,
+        )
+        EinkIconButton(EinkIcons.ChevronRight, "Página siguiente", onNext, enabled = page < pageCount - 1)
     }
 }
 
@@ -178,3 +197,47 @@ object EinkNoFling : FlingBehavior {
 /** Desplazamiento vertical sin inercia ni rebote. */
 fun Modifier.einkVerticalScroll(state: ScrollState): Modifier =
     verticalScroll(state, flingBehavior = EinkNoFling)
+
+/**
+ * Contenido largo (una sinopsis) partido en páginas de la altura disponible,
+ * con el indicador de página debajo. Se pasa de página con los botones o
+ * deslizando en horizontal; cada página repite un poco de la anterior para
+ * no perder el hilo.
+ */
+@Composable
+fun EinkPagedColumn(
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(horizontal = EinkTheme.dimens.gutter),
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    BoxWithConstraints(modifier) {
+        val viewport = with(density) { (maxHeight - 56.dp).roundToPx() }
+        val step = (viewport - with(density) { 24.dp.roundToPx() }).coerceAtLeast(1)
+        val pageCount = 1 + (scroll.maxValue + step - 1) / step
+        val page = if (scroll.maxValue > 0 && scroll.value >= scroll.maxValue) pageCount - 1 else scroll.value / step
+        val go: (Int) -> Unit = { target ->
+            val clamped = target.coerceIn(0, pageCount - 1)
+            scope.launch { scroll.scrollTo((clamped * step).coerceAtMost(scroll.maxValue)) }
+        }
+        Column(Modifier.fillMaxSize()) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .einkSwipePaging(onNext = { go(page + 1) }, onPrevious = { go(page - 1) })
+                    .verticalScroll(scroll, enabled = false)
+                    .padding(contentPadding),
+                content = content,
+            )
+            EinkPageIndicator(
+                page = page,
+                pageCount = pageCount,
+                onPrevious = { go(page - 1) },
+                onNext = { go(page + 1) },
+            )
+        }
+    }
+}

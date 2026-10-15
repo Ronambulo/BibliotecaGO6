@@ -5,6 +5,9 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -24,6 +27,7 @@ import com.bibliotecago.app.screens.DownloadsScreen
 import com.bibliotecago.app.screens.ExploreScreen
 import com.bibliotecago.app.screens.HomeScreen
 import com.bibliotecago.app.screens.LibraryScreen
+import com.bibliotecago.app.screens.ServerSettingsScreen
 import com.bibliotecago.app.screens.SettingsScreen
 import com.bibliotecago.core.eink.EinkBottomBar
 import com.bibliotecago.core.eink.EinkBottomBarItem
@@ -50,6 +54,8 @@ fun BibliotecaApp() {
         Modifier
             .fillMaxSize()
             .background(EinkTheme.colors.paper)
+            // Android 15+ dibuja la app bajo las barras del sistema; en el BOOX (Android 11) no hace nada.
+            .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             // Cambios de pantalla instantáneos: ninguna transición en ninguna dirección.
@@ -63,11 +69,14 @@ fun BibliotecaApp() {
                 sizeTransform = null,
             ) {
                 composable(TopDestination.Home.route) {
-                    HomeScreen(onOpenLibrary = { navController.navigateTop(TopDestination.Library) })
+                    HomeScreen(
+                        onOpenLibrary = { navController.navigateTop(TopDestination.Library) },
+                        onOpenDownloads = { navController.navigateTop(TopDestination.Downloads) },
+                    )
                 }
                 composable(TopDestination.Library.route) {
                     LibraryScreen(
-                        onOpenSettings = { navController.navigateTop(TopDestination.Settings) },
+                        onOpenSettings = { navController.navigate(SERVER_ROUTE) },
                         onOpenBook = navController::navigateToBook,
                         onBrowse = { navController.navigateToFeed(it.href, it.title) },
                     )
@@ -102,7 +111,12 @@ fun BibliotecaApp() {
                         onOpenBook = navController::navigateToBook,
                     )
                 }
-                composable(TopDestination.Settings.route) { SettingsScreen() }
+                composable(TopDestination.Settings.route) {
+                    SettingsScreen(onOpenServer = { navController.navigate(SERVER_ROUTE) })
+                }
+                composable(SERVER_ROUTE) {
+                    ServerSettingsScreen(onBack = { navController.popBackStack() })
+                }
             }
         }
 
@@ -118,6 +132,7 @@ fun BibliotecaApp() {
 }
 
 private const val BOOK_ROUTE = "libro/{id}"
+private const val SERVER_ROUTE = "ajustes/servidor"
 private const val FEED_ROUTE = "explorar?href={href}&title={title}"
 
 /** Un feed OPDS por su ruta en el servidor: índices, autores, series, búsquedas… */

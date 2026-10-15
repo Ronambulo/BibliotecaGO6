@@ -14,7 +14,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bibliotecago.app.appContainer
 import com.bibliotecago.catalog.OpdsNavigation
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.bibliotecago.core.eink.EinkCard
+import com.bibliotecago.core.eink.EinkDivider
+import com.bibliotecago.core.eink.EinkIcon
+import com.bibliotecago.core.eink.EinkIcons
 import com.bibliotecago.core.eink.EinkMessage
 import com.bibliotecago.core.eink.EinkPagedGrid
 import com.bibliotecago.core.eink.EinkText
@@ -44,11 +52,15 @@ fun ExploreScreen(
         EinkTopBar(title = title, onBack = onBack)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (val state = vm.state) {
-                ExploreState.Loading -> EinkMessage("Cargando…", Modifier.align(Alignment.Center))
+                // Mientras llega el feed, la pantalla sin contenido: nada salta al cargar.
+                ExploreState.Loading -> EinkPagedGrid(
+                    emptyList<Any>(), columns = 3, rows = 2, state = page, modifier = Modifier.fillMaxSize(),
+                ) {}
 
                 is ExploreState.Failed -> EinkMessage(
                     title = state.problem.title,
                     message = state.problem.hint,
+                    icon = EinkIcons.Warning,
                     actionLabel = "Reintentar",
                     onAction = vm::reload,
                     modifier = Modifier.align(Alignment.Center),
@@ -59,14 +71,11 @@ fun ExploreScreen(
                         state.books.isNotEmpty() -> {
                             val base = vm.coverBase
                             EinkPagedGrid(
-                                state.books, columns = 3, rows = 3, state = page, modifier = Modifier.weight(1f),
+                                state.books, columns = 3, rows = 2, state = page, modifier = Modifier.weight(1f),
                                 key = { it.id.value }, hasMore = state.hasMore, onLoadMore = vm::loadMore,
+                                spacing = 16.dp,
                             ) { book ->
-                                BookCover(
-                                    book, base,
-                                    Modifier.fillMaxSize().clickable(role = Role.Button) { onOpenBook(book.id) },
-                                    downloaded = book.id.value in vm.downloaded,
-                                )
+                                BookTile(book, base, book.id.value in vm.downloaded, onClick = { onOpenBook(book.id) })
                             }
                         }
                         state.navigation.isNotEmpty() -> {
@@ -78,6 +87,7 @@ fun ExploreScreen(
                                 rows = if (letters) 7 else 8,
                                 state = page,
                                 modifier = Modifier.weight(1f),
+                                spacing = if (letters) 10.dp else 0.dp,
                                 key = { it.href }, hasMore = state.hasMore, onLoadMore = vm::loadMore,
                             ) { entry -> NavigationCell(entry, centered = letters) { onOpenFeed(entry.href, entry.title) } }
                         }
@@ -86,6 +96,7 @@ fun ExploreScreen(
                                 "Sin resultados",
                                 Modifier.align(Alignment.Center),
                                 message = "No hay libros en este apartado.",
+                                icon = EinkIcons.Library,
                             )
                         }
                     }
@@ -98,15 +109,31 @@ fun ExploreScreen(
 
 @Composable
 private fun NavigationCell(entry: OpdsNavigation, centered: Boolean, onClick: () -> Unit) {
-    EinkCard(Modifier.fillMaxSize(), onClick = onClick) {
-        if (centered) {
+    if (centered) {
+        // Letra: baldosa gris redondeada.
+        EinkCard(Modifier.fillMaxSize(), onClick = onClick, padding = 0.dp, corner = 16.dp) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 EinkText(entry.title, style = EinkTheme.typography.heading, textAlign = TextAlign.Center)
             }
-        } else {
-            EinkText(entry.title, style = EinkTheme.typography.label, maxLines = 1)
-            // Calibre-Web pone aquí el número de libros («3 libros»).
-            entry.summary?.let { EinkText(it, style = EinkTheme.typography.caption, maxLines = 1) }
+        }
+    } else {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(role = Role.Button, onClick = onClick),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    EinkText(entry.title, style = EinkTheme.typography.label.merge(fontSize = 17.sp), maxLines = 1)
+                    // Calibre-Web pone aquí el número de libros («3 libros»).
+                    entry.summary?.let { EinkText(it, style = EinkTheme.typography.caption, color = EinkTheme.colors.muted, maxLines = 1) }
+                }
+                EinkIcon(EinkIcons.ChevronRight, contentDescription = null, size = 22.dp)
+            }
+            EinkDivider()
         }
     }
 }
