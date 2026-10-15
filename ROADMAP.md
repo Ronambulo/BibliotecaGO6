@@ -208,7 +208,7 @@ Objetivo: primera versión instalable.
 - [ ] Pruebas con los PDF más pesados de la biblioteca.
 - [ ] Pruebas completas sin conexión.
 - [ ] Recorrer los **criterios de aceptación** (abajo) en el BOOX.
-- [ ] Pantalla de licencias de terceros.
+- [x] Pantalla de licencias de terceros. *En Ajustes → Acerca de: cada biblioteca que entra en el APK (sacadas de `releaseRuntimeClasspath` y del desazucarado) con autor y licencia, y la dirección de cada texto de licencia. Hay que mantenerla al añadir dependencias.*
 - [ ] Generar keystore de firma y **copia de seguridad** fuera del repositorio.
 - [ ] Build `release` firmado (R8/minificación revisada con Readium).
 - [ ] Documentar instalación, actualización e instalación de nuevas versiones.

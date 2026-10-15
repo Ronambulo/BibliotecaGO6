@@ -27,6 +27,7 @@ import com.bibliotecago.app.screens.DownloadsScreen
 import com.bibliotecago.app.screens.ExploreScreen
 import com.bibliotecago.app.screens.HomeScreen
 import com.bibliotecago.app.screens.LibraryScreen
+import com.bibliotecago.app.screens.LicensesScreen
 import com.bibliotecago.app.screens.ServerSettingsScreen
 import com.bibliotecago.app.screens.SettingsScreen
 import com.bibliotecago.core.eink.EinkBottomBar
@@ -112,10 +113,16 @@ fun BibliotecaApp() {
                     )
                 }
                 composable(TopDestination.Settings.route) {
-                    SettingsScreen(onOpenServer = { navController.navigate(SERVER_ROUTE) })
+                    SettingsScreen(
+                        onOpenServer = { navController.navigate(SERVER_ROUTE) },
+                        onOpenLicenses = { navController.navigate(LICENSES_ROUTE) },
+                    )
                 }
                 composable(SERVER_ROUTE) {
                     ServerSettingsScreen(onBack = { navController.popBackStack() })
+                }
+                composable(LICENSES_ROUTE) {
+                    LicensesScreen(onBack = { navController.popBackStack() })
                 }
             }
         }
@@ -133,6 +140,7 @@ fun BibliotecaApp() {
 
 private const val BOOK_ROUTE = "libro/{id}"
 private const val SERVER_ROUTE = "ajustes/servidor"
+private const val LICENSES_ROUTE = "ajustes/licencias"
 private const val FEED_ROUTE = "explorar?href={href}&title={title}"
 
 /** Un feed OPDS por su ruta en el servidor: índices, autores, series, búsquedas… */

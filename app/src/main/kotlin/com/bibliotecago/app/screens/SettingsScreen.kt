@@ -45,7 +45,7 @@ import com.bibliotecago.server.EndpointReport
 
 /** Ajustes: grupos en tarjetas; el servidor tiene su propia página. */
 @Composable
-fun SettingsScreen(onOpenServer: () -> Unit) {
+fun SettingsScreen(onOpenServer: () -> Unit, onOpenLicenses: () -> Unit) {
     val container = LocalContext.current.appContainer
     val vm = viewModel { SettingsViewModel(container) }
     val prefs = rememberLibraryPrefs()
@@ -102,6 +102,13 @@ fun SettingsScreen(onOpenServer: () -> Unit) {
             }
             Group("Acerca de") {
                 InfoRow("BibliotecaGO", "Versión 0.1.0")
+                EinkDivider(Modifier.padding(vertical = 4.dp))
+                NavRow(
+                    icon = EinkIcons.Info,
+                    title = "Licencias de terceros",
+                    detail = "Bibliotecas de código abierto",
+                    onClick = onOpenLicenses,
+                )
             }
         }
     }
