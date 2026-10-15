@@ -10,7 +10,9 @@ import com.bibliotecago.server.Credentials
 import com.bibliotecago.server.EndpointReport
 import com.bibliotecago.server.ServerConfig
 import com.bibliotecago.server.ServerUrls
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 
 /** Formulario del servidor. La contraseña vive solo aquí y en el almacén cifrado. */
@@ -36,6 +38,15 @@ class SettingsViewModel(private val app: AppContainer) : ViewModel() {
     var savedNotice by mutableStateOf(false)
         private set
 
+    var hasSavedConfiguration by mutableStateOf(app.serverConfig.config.value != null)
+        private set
+
+    /** Espacio ocupado (RF-10); nulo hasta medirlo. */
+    var downloadsBytes by mutableStateOf<Long?>(null)
+        private set
+    var coverCacheBytes by mutableStateOf<Long?>(null)
+        private set
+
     init {
         app.serverConfig.config.value?.let { saved ->
             tunnelUrl = saved.tunnel?.toString().orEmpty()
@@ -43,6 +54,38 @@ class SettingsViewModel(private val app: AppContainer) : ViewModel() {
             username = saved.credentials.username
             password = saved.credentials.password
         }
+        refreshStorage()
+    }
+
+    fun refreshStorage() {
+        viewModelScope.launch {
+            downloadsBytes = app.downloads.usedBytes()
+            coverCacheBytes = withContext(Dispatchers.IO) { app.coverCacheBytes() }
+        }
+    }
+
+    fun clearCoverCache() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { app.clearCoverCache() }
+            refreshStorage()
+        }
+    }
+
+    /**
+     * Borra servidor y credenciales del dispositivo. Los libros descargados
+     * se quedan: se siguen pudiendo leer sin servidor.
+     */
+    fun deleteConfiguration() {
+        app.serverConfig.clear()
+        app.connection.forgetEndpoint()
+        hasSavedConfiguration = false
+        tunnelUrl = ""
+        localUrl = ""
+        username = ""
+        password = ""
+        tunnelError = null
+        localError = null
+        credentialsError = null
     }
 
     fun test() {
@@ -58,6 +101,7 @@ class SettingsViewModel(private val app: AppContainer) : ViewModel() {
         val config = validate() ?: return
         app.serverConfig.save(config)
         app.connection.forgetEndpoint()
+        hasSavedConfiguration = true
         savedNotice = true
     }
 

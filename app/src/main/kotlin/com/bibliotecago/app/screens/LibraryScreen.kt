@@ -9,21 +9,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
 import com.bibliotecago.app.appContainer
 import com.bibliotecago.catalog.CatalogListing
 import com.bibliotecago.core.eink.EinkButton
@@ -34,32 +31,58 @@ import com.bibliotecago.core.eink.EinkIcons
 import com.bibliotecago.core.eink.EinkMenu
 import com.bibliotecago.core.eink.EinkMessage
 import com.bibliotecago.core.eink.EinkPagedGrid
-import com.bibliotecago.core.eink.EinkSurface
 import com.bibliotecago.core.eink.EinkText
+import com.bibliotecago.core.eink.EinkTextField
 import com.bibliotecago.core.eink.EinkTheme
 import com.bibliotecago.core.eink.EinkTopBar
 import com.bibliotecago.core.eink.rememberEinkPageState
 import com.bibliotecago.core.model.Book
+import com.bibliotecago.core.model.BookId
 import com.bibliotecago.server.ConnectionProblem
-import com.bibliotecago.server.ServerUrls
-import okhttp3.HttpUrl
 
 @Composable
-fun LibraryScreen(onOpenSettings: () -> Unit) {
+fun LibraryScreen(onOpenSettings: () -> Unit, onOpenBook: (BookId) -> Unit) {
     val container = LocalContext.current.appContainer
     val vm = viewModel { LibraryViewModel(container) }
     var asList by rememberSaveable { mutableStateOf(false) }
     var showSort by rememberSaveable { mutableStateOf(false) }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var searchText by rememberSaveable { mutableStateOf("") }
     val gridPage = rememberEinkPageState()
     val listPage = rememberEinkPageState()
 
     Column(Modifier.fillMaxSize()) {
-        EinkTopBar(title = "Biblioteca") {
-            EinkIconButton(EinkIcons.Search, contentDescription = "Ordenar", onClick = { showSort = true })
+        val resetPages = {
+            gridPage.page = 0
+            listPage.page = 0
+        }
+        EinkTopBar(title = vm.query?.let { "Resultados" } ?: "Biblioteca") {
+            EinkIconButton(
+                EinkIcons.Search, contentDescription = "Buscar", selected = searching || vm.query != null,
+                onClick = { searching = true },
+            )
+            EinkIconButton(EinkIcons.Sort, contentDescription = "Ordenar", onClick = { showSort = true })
             EinkIconButton(
                 icon = if (asList) EinkIcons.Grid else EinkIcons.List,
                 contentDescription = if (asList) "Ver cuadrícula" else "Ver lista",
                 onClick = { asList = !asList },
+            )
+        }
+
+        if (searching || vm.query != null) {
+            SearchBar(
+                text = searchText,
+                onTextChange = { searchText = it },
+                onSearch = {
+                    resetPages()
+                    vm.search(searchText)
+                },
+                onClose = {
+                    searching = false
+                    searchText = ""
+                    resetPages()
+                    vm.clearSearch()
+                },
             )
         }
 
@@ -76,11 +99,20 @@ fun LibraryScreen(onOpenSettings: () -> Unit) {
                 )
 
                 is LibraryState.Content -> if (state.books.isEmpty()) {
-                    EinkMessage(
-                        "No hay libros",
-                        Modifier.align(Alignment.Center),
-                        message = "El servidor no tiene libros en este listado.",
-                    )
+                    val query = vm.query
+                    if (query != null) {
+                        EinkMessage(
+                            "Sin resultados",
+                            Modifier.align(Alignment.Center),
+                            message = "Ningún título ni autor coincide con «$query». Prueba con menos palabras.",
+                        )
+                    } else {
+                        EinkMessage(
+                            "No hay libros",
+                            Modifier.align(Alignment.Center),
+                            message = "El servidor no tiene libros en este listado.",
+                        )
+                    }
                 } else {
                     Column(Modifier.fillMaxSize()) {
                         val base = vm.coverBase
@@ -89,12 +121,18 @@ fun LibraryScreen(onOpenSettings: () -> Unit) {
                             EinkPagedGrid(
                                 state.books, columns = 1, rows = 7, state = listPage, modifier = Modifier.weight(1f),
                                 key = { it.id.value }, hasMore = state.hasMore, onLoadMore = vm::loadMore,
-                            ) { BookRow(it) }
+                            ) { BookRow(it, it.id.value in vm.downloaded) { onOpenBook(it.id) } }
                         } else {
                             EinkPagedGrid(
                                 state.books, columns = 3, rows = 3, state = gridPage, modifier = Modifier.weight(1f),
                                 key = { it.id.value }, hasMore = state.hasMore, onLoadMore = vm::loadMore,
-                            ) { BookCover(it, base) }
+                            ) { book ->
+                                BookCover(
+                                    book, base,
+                                    Modifier.fillMaxSize().clickable(role = Role.Button) { onOpenBook(book.id) },
+                                    downloaded = book.id.value in vm.downloaded,
+                                )
+                            }
                         }
                         state.moreProblem?.let { MoreFailed(it, onRetry = vm::loadMore) }
                     }
@@ -113,6 +151,8 @@ fun LibraryScreen(onOpenSettings: () -> Unit) {
                 showSort = false
                 gridPage.page = 0
                 listPage.page = 0
+                searching = false
+                searchText = ""
                 vm.select(CatalogListing.entries[it])
             },
         )
@@ -132,50 +172,35 @@ private fun MoreFailed(problem: ConnectionProblem, onRetry: () -> Unit) {
     }
 }
 
-/**
- * Portada del servidor. Debajo queda el título, que se ve mientras carga o si
- * el libro no tiene portada. La clave de caché es la ruta, no la URL: la
- * misma portada sirve por la red local y por el túnel.
- */
 @Composable
-private fun BookCover(book: Book, base: HttpUrl?) {
-    var coverShown by remember(book.coverPath) { mutableStateOf(false) }
-    EinkSurface(Modifier.fillMaxSize(), bordered = true) {
-        if (!coverShown) {
-            Column(
-                Modifier.align(Alignment.Center).padding(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                EinkText(book.title, style = EinkTheme.typography.caption, maxLines = 4, textAlign = TextAlign.Center)
-                Spacer(Modifier.height(4.dp))
-                EinkText(book.formats.joinToString { it.name }, style = EinkTheme.typography.caption, color = EinkTheme.colors.muted)
+private fun BookRow(book: Book, downloaded: Boolean, onClick: () -> Unit) {
+    EinkCard(Modifier.fillMaxSize(), onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                EinkText(book.title, style = EinkTheme.typography.label, maxLines = 1)
+                EinkText(book.authors.joinToString(), style = EinkTheme.typography.caption, maxLines = 1)
             }
-        }
-        val path = book.coverPath
-        if (path != null && base != null) {
-            val context = LocalContext.current
-            val request = remember(path, base) {
-                ImageRequest.Builder(context)
-                    .data(ServerUrls.resolve(base, path).toString())
-                    .memoryCacheKey(path)
-                    .diskCacheKey(path)
-                    .build()
-            }
-            AsyncImage(
-                model = request,
-                contentDescription = "Portada de ${book.title}",
-                modifier = Modifier.fillMaxSize().padding(2.dp),
-                contentScale = ContentScale.Fit,
-                onSuccess = { coverShown = true },
-            )
+            if (downloaded) DownloadedBadge()
         }
     }
 }
 
+/** Buscar por título o autor (RF-03). Se busca al pulsar el botón o «Intro», no a cada letra. */
 @Composable
-private fun BookRow(book: Book) {
-    EinkCard(Modifier.fillMaxSize(), onClick = {}) {
-        EinkText(book.title, style = EinkTheme.typography.label, maxLines = 1)
-        EinkText(book.authors.joinToString(), style = EinkTheme.typography.caption, maxLines = 1)
+private fun SearchBar(text: String, onTextChange: (String) -> Unit, onSearch: () -> Unit, onClose: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = EinkTheme.dimens.gutter, vertical = 8.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        EinkTextField(
+            value = text,
+            onValueChange = onTextChange,
+            label = "Buscar por título o autor",
+            modifier = Modifier.weight(1f),
+            onDone = onSearch,
+        )
+        Spacer(Modifier.width(8.dp))
+        EinkIconButton(EinkIcons.Search, contentDescription = "Buscar", onClick = onSearch, enabled = text.isNotBlank())
+        EinkIconButton(EinkIcons.Close, contentDescription = "Cerrar búsqueda", onClick = onClose)
     }
 }

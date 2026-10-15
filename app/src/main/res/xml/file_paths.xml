@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Solo los libros descargados; nada más del almacenamiento privado. -->
+<paths>
+    <files-path name="books" path="books/" />
+</paths>

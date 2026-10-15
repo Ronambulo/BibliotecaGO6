@@ -54,6 +54,14 @@ enum class ConnectionProblem(val title: String, val hint: String) {
         "Error del servidor",
         "Calibre-Web ha devuelto un error interno. Mira su registro.",
     ),
+    Incomplete(
+        "Descarga incompleta",
+        "El archivo llegó vacío o cortado y se ha descartado. Vuelve a intentarlo.",
+    ),
+    NoSpace(
+        "No queda espacio",
+        "El dispositivo no tiene sitio para el libro. Quita algún libro descargado.",
+    ),
     Unknown(
         "Error de conexión",
         "Ha ocurrido un error inesperado.",
@@ -78,7 +86,7 @@ enum class ConnectionProblem(val title: String, val hint: String) {
             is InterruptedIOException -> Timeout
             // OkHttp la lanza cuando la network_security_config bloquea HTTP.
             is UnknownServiceException -> Cleartext
-            is IOException -> Unreachable
+            is IOException -> if (e.message.orEmpty().contains("ENOSPC")) NoSpace else Unreachable
             else -> Unknown
         }
     }

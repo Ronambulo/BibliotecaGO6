@@ -109,32 +109,33 @@ Objetivo: conectar con la biblioteca real. Cubre RF-01 a RF-05 y RF-09.
 - [x] Credenciales cifradas con Android Keystore (AES-256-GCM; usuario y contraseña).
 - [x] **Probar conexión** con errores comprensibles (DNS, TLS, 401, timeout…). Informa por URL y detecta respuestas 200 que no son OPDS (portal de login, desafío de Cloudflare).
 - [x] Conmutación automática: usar la URL local si responde (3 s de conexión), si no la del túnel. La elección se recuerda 5 min y se olvida al cambiar de red.
-- [ ] Editar y eliminar la configuración. Editar, hecho; falta el botón de eliminar.
+- [x] Editar y eliminar la configuración. Eliminar pide confirmación y deja los libros descargados.
 
 ### Cliente OPDS (RF-02, RF-03)
 - [x] Cliente HTTP con autenticación básica e interceptor que **nunca** registre credenciales. Las credenciales solo se envían a las URL configuradas.
 - [x] Parser OPDS (Atom) para entradas, enlaces de navegación, portadas y adquisiciones.
 - [x] Pruebas unitarias del parser con los fixtures de la Fase 0.
 - [x] ~~`PagingSource` de Paging 3~~ Carga por cursor `rel="next"` con precarga una página antes del final. Paging 3 está pensado para listas perezosas; la cuadrícula E Ink trabaja con páginas fijas y OPDS no da el total.
-- [ ] Búsqueda por título y autor; navegación por autor, serie y etiquetas.
+- [ ] Búsqueda por título y autor; navegación por autor, serie y etiquetas. Búsqueda, hecha (`/opds/search`); falta la navegación.
 - [ ] Orden por título, autor y fecha cuando el servidor lo ofrezca.
-- [ ] Mensaje claro sin resultados; filtros conservados al volver atrás.
+- [x] Mensaje claro sin resultados; búsqueda, orden y página conservados al volver de una ficha.
 
 ### Portadas
 - [x] Coil con autenticación, decodificado al tamaño exacto de la celda. Clave de caché por ruta: la misma portada vale por la red local y por el túnel.
-- [ ] Caché en memoria y disco; tamaño visible en Ajustes con opción de vaciar.
+- [x] Caché en memoria y disco; tamaño visible en Ajustes con opción de vaciar.
 
 ### Descargas (RF-04, RF-05)
-- [ ] Esquema Room: libros descargados, estado de descarga.
-- [ ] `WorkManager` con progreso, reintentos y sin duplicados (trabajo único por libro y formato).
-- [ ] Guardado en el almacenamiento privado de la app.
-- [ ] Verificación de integridad: tamaño > 0 y coincidencia con `Content-Length`.
-- [ ] Quitar del dispositivo con confirmación («no se borra del servidor»).
-- [ ] Pruebas del gestor de descargas (corte de red, reintento, duplicado).
+- [x] Esquema Room: libros descargados, estado de descarga. La ficha se guarda para verla sin conexión; esquema exportado en `downloads/schemas`.
+- [x] `WorkManager` con progreso, reintentos y sin duplicados (trabajo único por libro y formato). Hasta 3 intentos y solo ante fallos pasajeros; progreso en pasos del 5 % para no refrescar la pantalla de más.
+- [x] Guardado en el almacenamiento privado de la app (`files/books`), a través de un `.part` que solo se renombra si está completo.
+- [x] Verificación de integridad: tamaño > 0 y coincidencia con `Content-Length`.
+- [x] Quitar del dispositivo con confirmación («no se borra del servidor»).
+- [x] Pruebas del gestor de descargas (corte de red, reintento, duplicado).
+- [x] Ficha del libro (RF-04): portada, autores, serie, valoración, sinopsis, etiquetas, idioma y estado de cada formato. «Leer» abre el archivo en otra app hasta que llegue el lector (Fase 3).
 
 ### Sin conexión (RF-09)
-- [ ] Descargas y ficha funcionan con el servidor caído.
-- [ ] Distinción visual monocroma entre descargado y solo en servidor.
+- [x] Descargas y ficha funcionan con el servidor caído. Pendiente de probar en modo avión en el BOOX.
+- [x] Distinción visual monocroma entre descargado y solo en servidor: marca negra con ✓ en la portada y en la lista.
 
 **Criterio de salida (M2):** catálogo real navegable con portadas; al menos un EPUB y un PDF descargados; Descargas funciona en modo avión.
 

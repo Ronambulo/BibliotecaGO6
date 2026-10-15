@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +37,10 @@ fun SettingsScreen() {
     val container = LocalContext.current.appContainer
     val vm = viewModel { SettingsViewModel(container) }
     var listByDefault by rememberSaveable { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var confirmClearCache by rememberSaveable { mutableStateOf(false) }
+    // Al volver a Ajustes desde otra pestaña puede haber nuevas descargas.
+    LaunchedEffect(Unit) { vm.refreshStorage() }
 
     Column(Modifier.fillMaxSize()) {
         EinkTopBar(title = "Ajustes")
@@ -81,12 +86,31 @@ fun SettingsScreen() {
                 )
                 EinkButton("Guardar", onClick = vm::save, modifier = Modifier.weight(1f), primary = true)
             }
+            if (vm.hasSavedConfiguration) {
+                Spacer(Modifier.height(12.dp))
+                EinkButton("Eliminar configuración", onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth())
+            }
 
             Spacer(Modifier.height(24.dp))
             EinkDivider()
             Spacer(Modifier.height(16.dp))
             EinkText("Biblioteca", style = EinkTheme.typography.heading)
             EinkSwitch(listByDefault, { listByDefault = it }, "Mostrar en lista por defecto")
+
+            Spacer(Modifier.height(24.dp))
+            EinkDivider()
+            Spacer(Modifier.height(16.dp))
+            EinkText("Almacenamiento", style = EinkTheme.typography.heading)
+            Spacer(Modifier.height(8.dp))
+            EinkText("Libros descargados: ${vm.downloadsBytes?.let(::formatBytes) ?: "…"}")
+            EinkText("Caché de portadas: ${vm.coverCacheBytes?.let(::formatBytes) ?: "…"}")
+            Spacer(Modifier.height(12.dp))
+            EinkButton(
+                "Vaciar caché de portadas",
+                onClick = { confirmClearCache = true },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = (vm.coverCacheBytes ?: 0L) > 0L,
+            )
 
             Spacer(Modifier.height(24.dp))
             EinkDivider()
@@ -112,6 +136,12 @@ fun SettingsScreen() {
         )
     }
 
+    SettingsDialogs(
+        vm,
+        confirmDelete, onDeleteDone = { confirmDelete = false },
+        confirmClearCache, onClearDone = { confirmClearCache = false },
+    )
+
     if (vm.savedNotice) {
         EinkDialog(
             onDismissRequest = vm::dismissSavedNotice,
@@ -120,6 +150,41 @@ fun SettingsScreen() {
             confirmLabel = "Entendido",
             onConfirm = vm::dismissSavedNotice,
             dismissLabel = null,
+        )
+    }
+}
+
+@Composable
+private fun SettingsDialogs(
+    vm: SettingsViewModel,
+    confirmDelete: Boolean,
+    onDeleteDone: () -> Unit,
+    confirmClearCache: Boolean,
+    onClearDone: () -> Unit,
+) {
+    if (confirmDelete) {
+        EinkDialog(
+            onDismissRequest = onDeleteDone,
+            title = "¿Eliminar configuración?",
+            text = "Se borran del dispositivo las URL, el usuario y la contraseña. " +
+                "Los libros descargados se quedan y se pueden seguir leyendo. No cambia nada en el servidor.",
+            confirmLabel = "Eliminar",
+            onConfirm = {
+                vm.deleteConfiguration()
+                onDeleteDone()
+            },
+        )
+    }
+    if (confirmClearCache) {
+        EinkDialog(
+            onDismissRequest = onClearDone,
+            title = "¿Vaciar caché de portadas?",
+            text = "Las portadas se volverán a descargar al ver la biblioteca. Sin conexión no se verán hasta entonces.",
+            confirmLabel = "Vaciar",
+            onConfirm = {
+                vm.clearCoverCache()
+                onClearDone()
+            },
         )
     }
 }

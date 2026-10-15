@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -300,6 +302,8 @@ fun EinkTextField(
     password: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
     supportingText: String? = null,
+    /** Si no es nulo, la tecla de acción del teclado es «Buscar» y lo llama. */
+    onDone: (() -> Unit)? = null,
 ) {
     val colors = EinkTheme.colors
     val dimens = EinkTheme.dimens
@@ -316,7 +320,9 @@ fun EinkTextField(
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (password) KeyboardType.Password else keyboardType,
                 autoCorrectEnabled = false,
+                imeAction = if (onDone != null) ImeAction.Search else ImeAction.Default,
             ),
+            keyboardActions = KeyboardActions(onSearch = { onDone?.invoke() }),
             modifier = Modifier.fillMaxWidth(),
             decorationBox = { inner ->
                 Box(

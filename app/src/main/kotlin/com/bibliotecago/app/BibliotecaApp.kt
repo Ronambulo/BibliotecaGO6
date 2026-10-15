@@ -16,6 +16,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import android.net.Uri
+import com.bibliotecago.app.screens.BookDetailScreen
 import com.bibliotecago.app.screens.DownloadsScreen
 import com.bibliotecago.app.screens.HomeScreen
 import com.bibliotecago.app.screens.LibraryScreen
@@ -24,6 +26,7 @@ import com.bibliotecago.core.eink.EinkBottomBar
 import com.bibliotecago.core.eink.EinkBottomBarItem
 import com.bibliotecago.core.eink.EinkIcons
 import com.bibliotecago.core.eink.EinkTheme
+import com.bibliotecago.core.model.BookId
 
 /** Destinos de la barra inferior (§5.3). */
 private enum class TopDestination(val route: String, val item: EinkBottomBarItem) {
@@ -60,10 +63,21 @@ fun BibliotecaApp() {
                     HomeScreen(onOpenLibrary = { navController.navigateTop(TopDestination.Library) })
                 }
                 composable(TopDestination.Library.route) {
-                    LibraryScreen(onOpenSettings = { navController.navigateTop(TopDestination.Settings) })
+                    LibraryScreen(
+                        onOpenSettings = { navController.navigateTop(TopDestination.Settings) },
+                        onOpenBook = navController::navigateToBook,
+                    )
                 }
                 composable(TopDestination.Downloads.route) {
-                    DownloadsScreen(onOpenLibrary = { navController.navigateTop(TopDestination.Library) })
+                    DownloadsScreen(
+                        onOpenLibrary = { navController.navigateTop(TopDestination.Library) },
+                        onOpenBook = navController::navigateToBook,
+                    )
+                }
+                composable(BOOK_ROUTE) { entry ->
+                    // Navigation ya descodifica el argumento.
+                    val id = BookId(entry.arguments?.getString("id").orEmpty())
+                    BookDetailScreen(id, onBack = { navController.popBackStack() })
                 }
                 composable(TopDestination.Settings.route) { SettingsScreen() }
             }
@@ -78,6 +92,13 @@ fun BibliotecaApp() {
             )
         }
     }
+}
+
+private const val BOOK_ROUTE = "libro/{id}"
+
+/** El id OPDS lleva «:» y «/» (urn:uuid:…), así que va codificado en la ruta. */
+private fun NavController.navigateToBook(id: BookId) {
+    navigate("libro/${Uri.encode(id.value)}")
 }
 
 private fun NavController.navigateTop(destination: TopDestination) {

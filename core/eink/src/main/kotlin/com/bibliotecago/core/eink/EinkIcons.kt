@@ -49,6 +49,12 @@ object EinkIcons {
         arcTo(6.5f, 6.5f, 0f, true, true, 16.5f, 10f)
         moveTo(14.8f, 14.8f); lineTo(20.5f, 20.5f)
     }
+    /** Tres líneas de largo decreciente: ordenar. */
+    val Sort = icon("Sort") {
+        moveTo(4f, 6f); lineTo(20f, 6f)
+        moveTo(4f, 12f); lineTo(15f, 12f)
+        moveTo(4f, 18f); lineTo(10f, 18f)
+    }
     val Back = icon("Back") {
         moveTo(20f, 12f); lineTo(4.5f, 12f)
         moveTo(10.5f, 6f); lineTo(4.5f, 12f); lineTo(10.5f, 18f)
