@@ -132,7 +132,11 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
     fun onLocatorChanged(locator: Locator) {
         this.locator = locator
         viewModelScope.launch {
-            store.save(bookId, BookFormat.EPUB, locator.toJSON().toString(), locator.locations.totalProgression)
+            store.save(
+                bookId, BookFormat.EPUB, locator.toJSON().toString(), locator.locations.totalProgression,
+                page = locator.locations.position,
+                pageCount = (state.value as? ReaderState.Ready)?.positionCount,
+            )
         }
     }
 

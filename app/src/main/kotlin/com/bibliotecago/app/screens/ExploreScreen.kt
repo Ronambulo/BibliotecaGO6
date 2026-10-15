@@ -75,7 +75,7 @@ fun ExploreScreen(
                                 key = { it.id.value }, hasMore = state.hasMore, onLoadMore = vm::loadMore,
                                 spacing = 16.dp,
                             ) { book ->
-                                BookTile(book, base, book.id.value in vm.downloaded, onClick = { onOpenBook(book.id) })
+                                BookTile(book, base, book.id.value in vm.downloaded, onClick = { onOpenBook(book.id) }, read = book.id.value in vm.finished)
                             }
                         }
                         state.navigation.isNotEmpty() -> {

@@ -74,6 +74,8 @@ import com.bibliotecago.core.eink.EinkPagedGrid
 import com.bibliotecago.core.eink.EinkText
 import com.bibliotecago.core.eink.EinkTextField
 import com.bibliotecago.core.eink.EinkTheme
+import com.bibliotecago.core.eink.disableTransitions
+import com.bibliotecago.core.eink.finishWithoutAnimation
 import com.bibliotecago.core.eink.hideSystemBars
 import com.bibliotecago.core.eink.EinkTopBar
 import com.bibliotecago.core.eink.rememberEinkPageState
@@ -117,6 +119,7 @@ class EpubReaderActivity : FragmentActivity() {
             if (fragment is EpubNavigatorFragment && !placeholderNavigator) attach(fragment)
         }
         super.onCreate(savedInstanceState)
+        disableTransitions()
 
         val root = FrameLayout(this)
         val pager = SwipeTurnLayout(this) { forward ->
@@ -161,7 +164,7 @@ class EpubReaderActivity : FragmentActivity() {
             when {
                 viewModel.panel != ReaderPanel.None -> viewModel.panel = ReaderPanel.None
                 viewModel.controlsVisible -> viewModel.controlsVisible = false
-                else -> finish()
+                else -> finishWithoutAnimation()
             }
         }
     }
@@ -307,7 +310,7 @@ class EpubReaderActivity : FragmentActivity() {
                 }
                 Spacer(Modifier.width(12.dp))
                 EinkIconButton(
-                    EinkIcons.Check,
+                    EinkIcons.Eye,
                     contentDescription = if (finished) "Quitar de leídos" else "Marcar como leído",
                     onClick = viewModel::toggleFinished,
                     selected = finished,
@@ -793,6 +796,7 @@ class EpubReaderActivity : FragmentActivity() {
 
         fun intent(context: Context, file: File, bookId: BookId, title: String): Intent =
             Intent(context, EpubReaderActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
                 .putExtra(EpubReaderViewModel.EXTRA_PATH, file.absolutePath)
                 .putExtra(EpubReaderViewModel.EXTRA_BOOK_ID, bookId.value)
                 .putExtra(EpubReaderViewModel.EXTRA_TITLE, title)

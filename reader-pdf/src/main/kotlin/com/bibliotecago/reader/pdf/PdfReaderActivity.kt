@@ -61,6 +61,8 @@ import com.bibliotecago.core.eink.EinkIcons
 import com.bibliotecago.core.eink.EinkMessage
 import com.bibliotecago.core.eink.EinkText
 import com.bibliotecago.core.eink.EinkTheme
+import com.bibliotecago.core.eink.disableTransitions
+import com.bibliotecago.core.eink.finishWithoutAnimation
 import com.bibliotecago.core.eink.hideSystemBars
 import com.bibliotecago.core.eink.EinkTopBar
 import com.bibliotecago.core.model.BookId
@@ -81,13 +83,14 @@ class PdfReaderActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        disableTransitions()
         setContent { EinkTheme { Reader() } }
         hideSystemBars()
         onBackPressedDispatcher.addCallback(this) {
             when {
                 viewModel.panel != PdfPanel.None -> viewModel.panel = PdfPanel.None
                 viewModel.controlsVisible -> viewModel.controlsVisible = false
-                else -> finish()
+                else -> finishWithoutAnimation()
             }
         }
     }
@@ -233,7 +236,7 @@ class PdfReaderActivity : ComponentActivity() {
                 EinkText(viewModel.title, Modifier.weight(1f), style = EinkTheme.typography.label, maxLines = 2)
                 Spacer(Modifier.width(12.dp))
                 EinkIconButton(
-                    EinkIcons.Check,
+                    EinkIcons.Eye,
                     contentDescription = if (finished) "Quitar de leídos" else "Marcar como leído",
                     onClick = viewModel::toggleFinished,
                     selected = finished,
@@ -447,6 +450,7 @@ class PdfReaderActivity : ComponentActivity() {
 
         fun intent(context: Context, file: File, bookId: BookId, title: String): Intent =
             Intent(context, PdfReaderActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
                 .putExtra(PdfReaderViewModel.EXTRA_PATH, file.absolutePath)
                 .putExtra(PdfReaderViewModel.EXTRA_BOOK_ID, bookId.value)
                 .putExtra(PdfReaderViewModel.EXTRA_TITLE, title)

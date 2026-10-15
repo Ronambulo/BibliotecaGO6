@@ -125,6 +125,28 @@ class LibraryStoreTest {
     }
 
     @Test
+    fun loMarcadoEnCalibreSeCopiaSalvoLoPendiente() = runBlocking {
+        store.finished.set(DUNE, true)
+        store.finished.markSynced(store.finished.pending().single())
+        store.finished.set(FUNDACION, true) // Aún sin enviar.
+
+        // En Calibre-Web: Dune ya no está leído, Solaris sí; Fundación no consta todavía.
+        store.finished.applyRemote(setOf(SOLARIS.value))
+
+        assertEquals(setOf(FUNDACION.value, SOLARIS.value), store.finished.observeAll().first())
+        assertEquals(listOf(FUNDACION.value), store.finished.pending().map { it.bookId })
+    }
+
+    @Test
+    fun guardaPaginaYTotal() = runBlocking {
+        store.progress.save(DUNE, BookFormat.PDF, "loc", 0.5, page = 40, pageCount = 80)
+
+        val saved = store.progress.observe(DUNE).first().single()
+        assertEquals(40, saved.page)
+        assertEquals(80, saved.pageCount)
+    }
+
+    @Test
     fun elProgresoSigueAlVolverAAbrir() = runBlocking {
         // Como al cerrar la app o reiniciar: base de datos en disco, cerrada y abierta de nuevo.
         val name = "persistencia-test.db"
@@ -150,5 +172,6 @@ class LibraryStoreTest {
     private companion object {
         val DUNE = BookId("1")
         val FUNDACION = BookId("2")
+        val SOLARIS = BookId("3")
     }
 }

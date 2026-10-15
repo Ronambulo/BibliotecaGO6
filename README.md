@@ -25,14 +25,14 @@ La app **no sube ni modifica nada** en el servidor: consulta el catálogo por OP
 
 ## Funcionalidades (v1)
 
-- **Biblioteca** en cuadrícula de portadas (o lista), paginada y sin desplazamiento continuo.
+- **Biblioteca** en cuadrícula de portadas (o lista), paginada y sin desplazamiento continuo. Se ordena con los listados de Calibre-Web o por **último abierto** (primero los libros abiertos, del más reciente al más antiguo, y después el resto por título). Cada portada lleva un ojo si el libro está leído y un círculo con la descarga si está en el dispositivo.
 - **Búsqueda y filtros** por título, autor, serie y etiquetas.
-- **Ficha del libro** con portada, sinopsis, serie, formatos y estado local.
+- **Ficha del libro** con portada, sinopsis, serie, formatos, estado local (leído, en el dispositivo), número de páginas y, si está a medias, la página por la que vas.
 - **Descargas** de EPUB y PDF al almacenamiento privado de la app, con progreso y reintentos.
 - **Lector EPUB** con tipografía, márgenes, tabla de contenidos, marcadores y búsqueda de texto.
 - **Lector PDF** con ajuste al ancho, página completa y zoom.
 - **Continuar leyendo**: posición y progreso guardados localmente.
-- **Marcar como leído** desde el lector; se marca también en Calibre-Web (al momento o, sin conexión, en cuanto vuelve la red).
+- **Marcar y desmarcar como leído** desde el lector o la ficha, sincronizado en los dos sentidos con Calibre-Web: lo marcado en la app se envía al momento (o, sin conexión, en cuanto vuelve la red), y lo marcado en la web llega a la app al abrirla, al volver a ella y al volver la red.
 - **Modo sin conexión** para todos los libros descargados.
 - **Acceso remoto** a través de Cloudflare Tunnel (HTTPS) y URL local opcional en casa.
 
@@ -149,6 +149,7 @@ El release usa el id `com.bibliotecago` y el debug `com.bibliotecago.debug`, as�
 - OPDS accesible (normalmente en `/opds`) con autenticación básica.
 - Publicado en un hostname propio a través de **Cloudflare Tunnel**.
 - **Dos usuarios**: un administrador (navegador del PC) y un usuario de **solo lectura** para la app. Ese usuario tiene que poder iniciar sesión también en la web: el estado «leído» no se puede cambiar por OPDS y la app lo marca a través de la web (`/ajax/toggleread`). El estado es de ese usuario en Calibre-Web.
+- **Libros por página**: sirve cualquier valor (por defecto, 60). La app pinta cada tanda en cuanto llega y pide la siguiente con antelación. El OPDS de Calibre-Web pagina con `offset` y no admite `limit`, así que el tamaño de la tanda lo fija este ajuste, que también afecta a la web.
 - Registro público desactivado y limitador de intentos de login activado.
 - Regla de Cloudflare para **no cachear** `/opds` ni las descargas.
 - Copia de seguridad periódica de la biblioteca y de la configuración.

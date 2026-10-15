@@ -35,6 +35,8 @@ class ExploreViewModel(private val app: AppContainer, private val href: String) 
         private set
     var downloaded by mutableStateOf<Set<String>>(emptySet())
         private set
+    var finished by mutableStateOf<Set<String>>(emptySet())
+        private set
 
     val coverBase get() = app.coverBase
 
@@ -44,6 +46,7 @@ class ExploreViewModel(private val app: AppContainer, private val href: String) 
     init {
         reload()
         viewModelScope.launch { app.downloadedBookIds().collect { downloaded = it } }
+        viewModelScope.launch { app.finishedBookIds().collect { finished = it } }
     }
 
     fun reload() {

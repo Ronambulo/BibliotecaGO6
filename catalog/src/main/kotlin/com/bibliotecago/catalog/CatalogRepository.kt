@@ -41,7 +41,27 @@ class CatalogRepository(private val connection: ServerConnection) {
     suspend fun search(query: String, template: String = DEFAULT_SEARCH): OpdsFeed =
         feed(searchHref(query, template))
 
+    /**
+     * Ids OPDS de los libros que el usuario tiene marcados como leídos en
+     * Calibre-Web (`/opds/readbooks`), recorriendo todas sus páginas.
+     */
+    suspend fun readBookIds(): Set<String> {
+        val ids = mutableSetOf<String>()
+        var href: String? = READ_BOOKS
+        var pages = 0
+        while (href != null && pages < MAX_READ_PAGES) {
+            val page = feed(href)
+            page.books.mapTo(ids) { it.id.value }
+            href = page.nextHref
+            pages++
+        }
+        return ids
+    }
+
     companion object {
+        const val READ_BOOKS = "opds/readbooks"
+        /** Tope por si el servidor devolviera un `next` que no avanza. */
+        private const val MAX_READ_PAGES = 1000
         const val DEFAULT_SEARCH = "opds/search/{searchTerms}"
 
         /** Ruta de búsqueda para [query]; la usa también la ficha para «Más del autor». */

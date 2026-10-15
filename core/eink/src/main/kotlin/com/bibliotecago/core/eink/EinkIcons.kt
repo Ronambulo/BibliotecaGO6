@@ -74,6 +74,12 @@ object EinkIcons {
         moveTo(5.5f, 5.5f); lineTo(18.5f, 18.5f)
         moveTo(18.5f, 5.5f); lineTo(5.5f, 18.5f)
     }
+    /** Ojo: libro leído. */
+    val Eye = icon("Eye") {
+        // Bien abierto: los párpados llegan a 5 y 19, y la pupila es grande.
+        moveTo(1.5f, 12f); curveTo(4.5f, 3f, 19.5f, 3f, 22.5f, 12f); curveTo(19.5f, 21f, 4.5f, 21f, 1.5f, 12f); close()
+        circle(12f, 12f, 3.6f)
+    }
     val Check = icon("Check") {
         moveTo(4f, 12.5f); lineTo(9.5f, 18f); lineTo(20f, 6.5f)
     }

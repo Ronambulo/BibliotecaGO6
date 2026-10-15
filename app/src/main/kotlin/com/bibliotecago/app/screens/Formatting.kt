@@ -45,6 +45,9 @@ fun describe(state: DownloadState): String = when (state) {
 }
 
 /** Ids de los libros con algún formato ya en el dispositivo, para marcarlos en los listados. */
+/** Libros leídos (marcados aquí o en Calibre-Web), para marcarlos en las portadas. */
+fun AppContainer.finishedBookIds(): Flow<Set<String>> = library.finished.observeAll()
+
 fun AppContainer.downloadedBookIds(): Flow<Set<String>> = downloads.downloads.map { list ->
     list.filter { it.state is DownloadState.Done }.mapTo(HashSet()) { it.book.id.value }
 }

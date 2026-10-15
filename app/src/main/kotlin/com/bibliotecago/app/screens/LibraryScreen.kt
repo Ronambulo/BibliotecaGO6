@@ -105,7 +105,7 @@ fun LibraryScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 EinkChip(
-                    vm.listing.label,
+                    if (vm.lastOpened) LAST_OPENED else vm.listing.label,
                     onClick = { showSort = true },
                     selected = true,
                     trailingIcon = EinkIcons.ChevronDown,
@@ -167,7 +167,11 @@ fun LibraryScreen(
                         EinkMessage(
                             "No hay libros",
                             Modifier.align(Alignment.Center),
-                            message = "El servidor no tiene libros en este listado.",
+                            message = if (vm.lastOpened) {
+                                "Aún no has abierto ningún libro en el lector."
+                            } else {
+                                "El servidor no tiene libros en este listado."
+                            },
                             icon = EinkIcons.Library,
                         )
                     }
@@ -185,14 +189,14 @@ fun LibraryScreen(
                                 state.books, columns = 1, rows = 6, state = listPage, modifier = Modifier.weight(1f),
                                 key = { it.id.value }, hasMore = state.hasMore, onLoadMore = vm::loadMore,
                                 spacing = 4.dp,
-                            ) { BookRow(it, base, it.id.value in vm.downloaded) { onOpenBook(it.id) } }
+                            ) { BookRow(it, base, it.id.value in vm.downloaded, it.id.value in vm.finished) { onOpenBook(it.id) } }
                         } else {
                             EinkPagedGrid(
                                 state.books, columns = 3, rows = 2, state = gridPage, modifier = Modifier.weight(1f),
                                 key = { it.id.value }, hasMore = state.hasMore, onLoadMore = vm::loadMore,
                                 spacing = 16.dp,
                             ) { book ->
-                                BookTile(book, base, book.id.value in vm.downloaded, onClick = { onOpenBook(book.id) })
+                                BookTile(book, base, book.id.value in vm.downloaded, onClick = { onOpenBook(book.id) }, read = book.id.value in vm.finished)
                             }
                         }
                         state.moreProblem?.let { MoreFailed(it, onRetry = vm::loadMore) }
@@ -216,18 +220,21 @@ fun LibraryScreen(
         EinkMenu(
             onDismissRequest = { showSort = false },
             title = "Ordenar",
-            options = CatalogListing.entries.map { it.label },
-            selectedIndex = vm.listing.ordinal,
+            options = CatalogListing.entries.map { it.label } + LAST_OPENED,
+            selectedIndex = if (vm.lastOpened) CatalogListing.entries.size else vm.listing.ordinal,
             onSelect = {
                 showSort = false
                 resetPages()
                 searching = false
                 searchText = ""
-                vm.select(CatalogListing.entries[it])
+                if (it == CatalogListing.entries.size) vm.selectLastOpened() else vm.select(CatalogListing.entries[it])
             },
         )
     }
 }
+
+/** Orden local, fuera de los listados OPDS del servidor. */
+private const val LAST_OPENED = "Último abierto"
 
 /** Aviso al pie cuando falla la página siguiente; lo ya cargado se sigue viendo. */
 @Composable
@@ -249,7 +256,7 @@ fun MoreFailed(problem: ConnectionProblem, onRetry: () -> Unit) {
 
 /** Fila de la vista de lista: portada pequeña, título, autor y formatos. */
 @Composable
-private fun BookRow(book: Book, base: okhttp3.HttpUrl?, downloaded: Boolean, onClick: () -> Unit) {
+private fun BookRow(book: Book, base: okhttp3.HttpUrl?, downloaded: Boolean, read: Boolean, onClick: () -> Unit) {
     val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Row(
         Modifier
@@ -269,6 +276,10 @@ private fun BookRow(book: Book, base: okhttp3.HttpUrl?, downloaded: Boolean, onC
                 color = EinkTheme.colors.muted,
                 maxLines = 1,
             )
+        }
+        if (read) {
+            Spacer(Modifier.width(8.dp))
+            ReadBadge(small = true)
         }
         if (downloaded) {
             Spacer(Modifier.width(8.dp))

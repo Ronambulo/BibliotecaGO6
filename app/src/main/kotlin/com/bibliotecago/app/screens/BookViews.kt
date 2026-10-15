@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
@@ -62,6 +63,7 @@ fun BookCover(
     base: HttpUrl?,
     modifier: Modifier = Modifier,
     downloaded: Boolean = false,
+    read: Boolean = false,
     alignment: Alignment = Alignment.Center,
     corner: Dp = 10.dp,
     compact: Boolean = false,
@@ -123,7 +125,8 @@ fun BookCover(
             }
             // Línea fina para que una portada blanca no se funda con el papel.
             Box(Modifier.matchParentSize().einkBorder(1.dp, colors.line, corner))
-            if (downloaded) DownloadedBadge(Modifier.align(Alignment.TopEnd).padding(6.dp), small = compact)
+            if (read) ReadBadge(Modifier.align(Alignment.TopEnd).padding(6.dp), small = compact)
+            if (downloaded) DownloadedBadge(Modifier.align(Alignment.BottomEnd).padding(6.dp), small = compact)
         }
     }
 }
@@ -132,11 +135,20 @@ fun BookCover(
 private const val BOOK_RATIO = 2f / 3f
 
 /**
- * Marca de «en el dispositivo»: círculo negro con una marca blanca y borde
- * blanco, que se distingue igual sobre una portada clara u oscura (RF-09).
+ * Marcas de la portada: círculo negro con el icono en blanco y borde blanco,
+ * que se distingue igual sobre una portada clara u oscura (RF-09). Arriba a la
+ * derecha «leído» (ojo); abajo «en el dispositivo» (descarga).
  */
 @Composable
-fun DownloadedBadge(modifier: Modifier = Modifier, small: Boolean = false) {
+fun DownloadedBadge(modifier: Modifier = Modifier, small: Boolean = false) =
+    CoverBadge(EinkIcons.Download, "En el dispositivo", modifier, small)
+
+@Composable
+fun ReadBadge(modifier: Modifier = Modifier, small: Boolean = false) =
+    CoverBadge(EinkIcons.Eye, "Leído", modifier, small)
+
+@Composable
+private fun CoverBadge(icon: ImageVector, description: String, modifier: Modifier, small: Boolean) {
     val size = if (small) 20.dp else 28.dp
     EinkSurface(
         modifier
@@ -145,18 +157,24 @@ fun DownloadedBadge(modifier: Modifier = Modifier, small: Boolean = false) {
         tone = EinkTone.Ink,
         corner = size / 2,
     ) {
-        EinkIcon(EinkIcons.Check, contentDescription = "En el dispositivo", Modifier.align(Alignment.Center), size = size * 0.55f)
+        EinkIcon(icon, contentDescription = description, Modifier.align(Alignment.Center), size = size * 0.6f)
     }
 }
 
-/** Píldora negra con «En el dispositivo», para filas y la ficha. */
+/** Píldoras negras de la ficha: «En el dispositivo» y «Leído». */
 @Composable
-fun DownloadedTag(modifier: Modifier = Modifier) {
+fun DownloadedTag(modifier: Modifier = Modifier) = StatusTag(EinkIcons.Download, "En el dispositivo", modifier)
+
+@Composable
+fun ReadTag(modifier: Modifier = Modifier) = StatusTag(EinkIcons.Eye, "Leído", modifier)
+
+@Composable
+private fun StatusTag(icon: ImageVector, text: String, modifier: Modifier) {
     EinkSurface(modifier, tone = EinkTone.Ink, corner = 14.dp) {
         Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            EinkIcon(EinkIcons.Check, contentDescription = null, size = 14.dp)
+            EinkIcon(icon, contentDescription = null, size = 14.dp)
             Spacer(Modifier.width(4.dp))
-            EinkText("En el dispositivo", style = EinkTheme.typography.eyebrow.merge(letterSpacing = 0.sp), maxLines = 1)
+            EinkText(text, style = EinkTheme.typography.eyebrow.merge(letterSpacing = 0.sp), maxLines = 1)
         }
     }
 }
@@ -166,7 +184,14 @@ fun DownloadedTag(modifier: Modifier = Modifier) {
  * línea cada uno.
  */
 @Composable
-fun BookTile(book: Book, base: HttpUrl?, downloaded: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun BookTile(
+    book: Book,
+    base: HttpUrl?,
+    downloaded: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    read: Boolean = false,
+) {
     val press = remember { MutableInteractionSource() }
     Column(
         modifier
@@ -177,6 +202,7 @@ fun BookTile(book: Book, base: HttpUrl?, downloaded: Boolean, onClick: () -> Uni
             book, base,
             Modifier.weight(1f).fillMaxWidth(),
             downloaded = downloaded,
+            read = read,
             alignment = Alignment.BottomCenter,
             pressSource = press,
         )

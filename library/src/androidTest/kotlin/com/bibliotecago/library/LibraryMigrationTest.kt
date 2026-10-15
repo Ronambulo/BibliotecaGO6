@@ -4,6 +4,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,6 +61,27 @@ class LibraryMigrationTest {
         db.query("SELECT COUNT(*) FROM finished_books").use {
             it.moveToFirst()
             assertEquals(0, it.getInt(0))
+        }
+    }
+
+    @Test
+    fun de3a4ConservaElProgresoSinPaginas() {
+        helper.createDatabase(NAME, 3).apply {
+            execSQL("INSERT INTO reading_progress VALUES ('7', 'PDF', 'loc', 0.5, 1000)")
+            execSQL("INSERT INTO finished_books VALUES ('8', 1, 1000, 0)")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(NAME, 4, true)
+
+        db.query("SELECT progression, page, pageCount FROM reading_progress").use {
+            it.moveToFirst()
+            assertEquals(0.5, it.getDouble(0), 0.0)
+            assertTrue(it.isNull(1) && it.isNull(2))
+        }
+        db.query("SELECT COUNT(*) FROM finished_books").use {
+            it.moveToFirst()
+            assertEquals(1, it.getInt(0))
         }
     }
 

@@ -51,6 +51,7 @@ fun DownloadsScreen(onOpenLibrary: () -> Unit, onOpenBook: (BookId) -> Unit) {
     val context = LocalContext.current
     val container = context.appContainer
     val downloads by container.downloads.downloads.collectAsState(initial = null)
+    val finished by container.finishedBookIds().collectAsState(initial = emptySet())
     val prefs = rememberLibraryPrefs()
     val gridPage = rememberEinkPageState()
     val listPage = rememberEinkPageState()
@@ -74,7 +75,7 @@ fun DownloadsScreen(onOpenLibrary: () -> Unit, onOpenBook: (BookId) -> Unit) {
                 list, columns = 3, rows = 2, state = gridPage, modifier = Modifier.weight(1f).fillMaxWidth(),
                 key = { "${it.book.id.value}:${it.format}" },
                 spacing = 16.dp,
-            ) { download -> DownloadTile(download, container) { onOpenBook(download.book.id) } }
+            ) { download -> DownloadTile(download, container, read = download.book.id.value in finished) { onOpenBook(download.book.id) } }
             else -> {
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                     // Tantas filas como quepan enteras.
@@ -87,6 +88,7 @@ fun DownloadsScreen(onOpenLibrary: () -> Unit, onOpenBook: (BookId) -> Unit) {
                         DownloadRow(
                             download,
                             container,
+                            read = download.book.id.value in finished,
                             onClick = { onOpenBook(download.book.id) },
                             onRead = { done -> context.openReader(download, done) },
                             onCancel = { scope.launch { container.downloads.cancel(download.book.id, download.format) } },
@@ -135,14 +137,14 @@ private fun StorageSummary(list: List<Download>) {
 
 /** Portada en la cuadrícula; si aún no está en el dispositivo, su estado debajo. */
 @Composable
-private fun DownloadTile(download: Download, container: AppContainer, onClick: () -> Unit) {
+private fun DownloadTile(download: Download, container: AppContainer, read: Boolean, onClick: () -> Unit) {
     val state = download.state
     if (state is DownloadState.Done) {
-        BookTile(download.book, container.coverBase, downloaded = true, onClick = onClick)
+        BookTile(download.book, container.coverBase, downloaded = true, onClick = onClick, read = read)
         return
     }
     Column(Modifier.fillMaxSize()) {
-        BookTile(download.book, container.coverBase, downloaded = false, onClick = onClick, modifier = Modifier.weight(1f))
+        BookTile(download.book, container.coverBase, downloaded = false, onClick = onClick, modifier = Modifier.weight(1f), read = read)
         Spacer(Modifier.height(4.dp))
         EinkText(describe(state), style = EinkTheme.typography.caption, maxLines = 1)
         if (state is DownloadState.Running) {
@@ -155,6 +157,7 @@ private fun DownloadTile(download: Download, container: AppContainer, onClick: (
 private fun DownloadRow(
     download: Download,
     container: AppContainer,
+    read: Boolean,
     onClick: () -> Unit,
     onRead: (DownloadState.Done) -> Unit,
     onCancel: () -> Unit,
@@ -169,7 +172,7 @@ private fun DownloadRow(
         ) {
             BookCover(
                 download.book, container.coverBase, Modifier.size(width = 52.dp, height = 78.dp),
-                corner = 6.dp, compact = true, pressSource = press,
+                corner = 6.dp, compact = true, read = read, pressSource = press,
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {

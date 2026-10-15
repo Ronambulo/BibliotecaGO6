@@ -28,13 +28,25 @@ class ReadingProgressStore internal constructor(private val dao: ReadingProgress
 
     suspend fun get(bookId: BookId, format: BookFormat): ReadingProgress? = dao.get(bookId.value, format)
 
-    suspend fun save(bookId: BookId, format: BookFormat, locator: String, progression: Double?) =
-        dao.upsert(ReadingProgress(bookId.value, format, locator, progression, clock()))
+    suspend fun save(
+        bookId: BookId,
+        format: BookFormat,
+        locator: String,
+        progression: Double?,
+        page: Int? = null,
+        pageCount: Int? = null,
+    ) = dao.upsert(ReadingProgress(bookId.value, format, locator, progression, clock(), page, pageCount))
 
     suspend fun delete(bookId: BookId, format: BookFormat) = dao.delete(bookId.value, format)
 
+    /** Marca el libro como recién abierto (orden «Último abierto») sin cambiar dónde va. */
+    suspend fun touch(bookId: BookId, format: BookFormat) = dao.touch(bookId.value, format, clock())
+
     /** Lo último leído primero: para «Seguir leyendo». */
     fun observeAll(): Flow<List<ReadingProgress>> = dao.observeAll()
+
+    /** El progreso de cada formato de un libro, lo último leído primero. */
+    fun observe(bookId: BookId): Flow<List<ReadingProgress>> = dao.observe(bookId.value)
 }
 
 /** Marcadores de cada libro, en orden de lectura. */
@@ -76,6 +88,16 @@ class FinishedStore internal constructor(private val dao: FinishedBookDao, priva
 
     /** Enviado: deja de estar pendiente, salvo que haya cambiado entretanto. */
     suspend fun markSynced(book: FinishedBook) = dao.markSynced(book.bookId, book.updatedAt)
+
+    /** Lo que queda por enviar ahora mismo. */
+    suspend fun pending(): List<FinishedBook> = dao.pending()
+
+    /**
+     * Copia lo que dice Calibre-Web: leídos los de [readIds] y no leídos los
+     * demás. Lo que aún está pendiente de enviar no se toca: manda el cambio
+     * hecho en el dispositivo.
+     */
+    suspend fun applyRemote(readIds: Set<String>) = dao.applyRemote(readIds, clock())
 }
 
 /**

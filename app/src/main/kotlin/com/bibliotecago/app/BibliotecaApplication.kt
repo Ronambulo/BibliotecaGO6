@@ -49,7 +49,7 @@ class BibliotecaApplication : Application(), SingletonImageLoader.Factory, Downl
 }
 
 /** Dependencias de la app, creadas a mano: son pocas y no compensa un framework de DI. */
-class AppContainer(private val context: Context) {
+class AppContainer(val context: Context) {
     val serverConfig = ServerConfigStore(context)
     val connection = ServerConnection(config = { serverConfig.config.value })
     val catalog = CatalogRepository(connection)
@@ -57,8 +57,8 @@ class AppContainer(private val context: Context) {
     val books = BookCache()
     val library = LibraryStore(context)
 
-    /** Los libros marcados como leídos también se marcan en Calibre-Web. */
-    val readSync = ReadSync(library.finished, ReadStatusClient(connection)) { id ->
+    /** La marca de leído se sincroniza en los dos sentidos con Calibre-Web. */
+    val readSync = ReadSync(library.finished, ReadStatusClient(connection), catalog::readBookIds) { id ->
         books[id] ?: downloads.savedBook(id)
     }
 

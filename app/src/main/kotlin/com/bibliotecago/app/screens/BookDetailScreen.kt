@@ -31,6 +31,7 @@ import com.bibliotecago.core.eink.EinkButton
 import com.bibliotecago.core.eink.EinkCard
 import com.bibliotecago.core.eink.EinkChip
 import com.bibliotecago.core.eink.EinkDialog
+import com.bibliotecago.core.eink.EinkIconButton
 import com.bibliotecago.core.eink.EinkIcons
 import com.bibliotecago.core.eink.EinkMessage
 import com.bibliotecago.core.eink.EinkProgressBar
@@ -39,6 +40,7 @@ import com.bibliotecago.core.eink.EinkText
 import com.bibliotecago.core.eink.EinkTheme
 import com.bibliotecago.core.eink.EinkTone
 import com.bibliotecago.core.eink.EinkTopBar
+import com.bibliotecago.core.eink.einkBorder
 import com.bibliotecago.core.eink.einkVerticalScroll
 import com.bibliotecago.core.model.Book
 import com.bibliotecago.core.model.BookFile
@@ -121,6 +123,33 @@ fun BookDetailScreen(bookId: BookId, onBack: () -> Unit, onOpenFeed: (href: Stri
 }
 
 /**
+ * Páginas del libro y, si está a medias, por cuál va: «Página 42 de 310 · 13 %»
+ * con una barra. Sin páginas conocidas (no descargado) muestra solo el porcentaje.
+ */
+@Composable
+private fun PagesInfo(vm: BookDetailViewModel) {
+    val total = vm.pageCount
+    val progress = vm.progress
+    val fraction = progress?.progression?.toFloat()?.coerceIn(0f, 1f)
+    val reading = progress != null && !vm.finished && fraction != null && fraction > 0f && fraction < 1f
+    val text = when {
+        reading && total != null && progress?.page != null ->
+            "Página ${progress.page} de $total · ${percent(fraction!!)}"
+        reading -> "Leído ${percent(fraction!!)}" + (total?.let { " · $it páginas" } ?: "")
+        total != null -> "$total páginas"
+        else -> return
+    }
+    Spacer(Modifier.height(10.dp))
+    EinkText(text, style = EinkTheme.typography.caption, maxLines = 1)
+    if (reading) {
+        Spacer(Modifier.height(6.dp))
+        EinkProgressBar(fraction!!, Modifier.fillMaxWidth(), height = 4.dp)
+    }
+}
+
+private fun percent(fraction: Float) = "${(fraction * 100).toInt()} %"
+
+/**
  * Cabecera: portada, título, autor (enlace a sus libros), serie y valoración.
  * «Más de…» busca por nombre: las entradas OPDS no enlazan al autor ni a la
  * serie, y la búsqueda de Calibre-Web incluye ambos.
@@ -158,10 +187,15 @@ private fun Header(book: Book, vm: BookDetailViewModel, onOpenFeed: (String, Str
                 Spacer(Modifier.height(8.dp))
                 EinkText(ratingStars(it), style = EinkTheme.typography.section)
             }
-            if (vm.downloads.values.any { it.state is DownloadState.Done }) {
+            val downloaded = vm.downloads.values.any { it.state is DownloadState.Done }
+            if (downloaded || vm.finished) {
                 Spacer(Modifier.height(10.dp))
-                DownloadedTag()
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (vm.finished) ReadTag()
+                    if (downloaded) DownloadedTag()
+                }
             }
+            PagesInfo(vm)
             // El idioma al lado de la portada, donde sobra sitio.
             book.language?.let {
                 Spacer(Modifier.height(10.dp))
@@ -169,16 +203,25 @@ private fun Header(book: Book, vm: BookDetailViewModel, onOpenFeed: (String, Str
             }
         }
     }
-    if (author != null || series != null) {
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (author != null) {
-                EinkChip("Más del autor", { onOpenFeed(CatalogRepository.searchHref(author), author) }, icon = EinkIcons.User)
-            }
-            if (series != null) {
-                EinkChip("Ver la serie", { onOpenFeed(CatalogRepository.searchHref(series), series) }, icon = EinkIcons.Series)
-            }
+    Spacer(Modifier.height(16.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (author != null) {
+            EinkChip("Más del autor", { onOpenFeed(CatalogRepository.searchHref(author), author) }, icon = EinkIcons.User)
         }
+        if (series != null) {
+            EinkChip("Ver la serie", { onOpenFeed(CatalogRepository.searchHref(series), series) }, icon = EinkIcons.Series)
+        }
+        // Solo el ojo, con el borde de las píldoras; relleno en negro si está leído.
+        // Se envía a Calibre-Web igual que desde el lector.
+        EinkIconButton(
+            EinkIcons.Eye,
+            contentDescription = if (vm.finished) "Quitar de leídos" else "Marcar como leído",
+            onClick = vm::toggleFinished,
+            modifier = Modifier.einkBorder(1.5.dp, EinkTheme.colors.ink, 20.dp),
+            selected = vm.finished,
+            tonal = false,
+            size = 40.dp,
+        )
     }
 }
 

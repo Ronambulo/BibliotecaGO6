@@ -14,4 +14,10 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        // Al volver a la app, se trae lo marcado como leído en Calibre-Web mientras tanto.
+        appContainer.readSync.retry()
+    }
 }

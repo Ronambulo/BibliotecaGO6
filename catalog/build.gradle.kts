@@ -21,4 +21,6 @@ dependencies {
     api(project(":server"))
 
     testImplementation(libs.junit)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

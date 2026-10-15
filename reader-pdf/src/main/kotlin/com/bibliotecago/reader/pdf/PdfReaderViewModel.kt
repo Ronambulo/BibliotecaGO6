@@ -131,6 +131,7 @@ class PdfReaderViewModel(application: Application, state: SavedStateHandle) : An
             return
         }
         document = opened
+        store.touch(bookId, BookFormat.PDF)
         val saved = withContext(Dispatchers.IO) { store.get(bookId, BookFormat.PDF)?.locator }
             ?.let { runCatching { JSONObject(it) }.getOrNull() }
             ?.let { PdfPosition(it.optInt(KEY_PAGE), it.optDouble(KEY_OFFSET, 0.0).toFloat()) }
@@ -352,7 +353,9 @@ class PdfReaderViewModel(application: Application, state: SavedStateHandle) : An
     private fun save() {
         val json = JSONObject().put(KEY_PAGE, position.page).put(KEY_OFFSET, position.offset.toDouble()).toString()
         val progress = progression
-        viewModelScope.launch { store.save(bookId, BookFormat.PDF, json, progress) }
+        val page = position.page + 1
+        val count = document?.pageCount
+        viewModelScope.launch { store.save(bookId, BookFormat.PDF, json, progress, page, count) }
     }
 
     override fun onCleared() {

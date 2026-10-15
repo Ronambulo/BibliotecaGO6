@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -31,8 +32,26 @@ internal interface FinishedBookDao {
     @Query("SELECT * FROM finished_books WHERE synced = 0 ORDER BY updatedAt")
     fun observePending(): Flow<List<FinishedBook>>
 
+    @Query("SELECT * FROM finished_books WHERE synced = 0 ORDER BY updatedAt")
+    suspend fun pending(): List<FinishedBook>
+
+    @Query("SELECT * FROM finished_books")
+    suspend fun all(): List<FinishedBook>
+
     @Upsert
     suspend fun upsert(book: FinishedBook)
+
+    @Transaction
+    suspend fun applyRemote(readIds: Set<String>, now: Long) {
+        val local = all().associateBy { it.bookId }
+        for (row in local.values) {
+            val read = row.bookId in readIds
+            if (row.synced && row.finished != read) upsert(row.copy(finished = read, updatedAt = now))
+        }
+        for (id in readIds) {
+            if (id !in local) upsert(FinishedBook(id, finished = true, updatedAt = now, synced = true))
+        }
+    }
 
     /** Solo si no ha vuelto a cambiar mientras se enviaba. */
     @Query("UPDATE finished_books SET synced = 1 WHERE bookId = :bookId AND updatedAt = :updatedAt")
