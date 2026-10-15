@@ -83,7 +83,7 @@ La barra inferior se oculta durante la lectura.
 | Descargas | WorkManager (progreso y reintentos) |
 | Base de datos local | Room (descargas, progreso, marcadores) |
 | EPUB | Readium Kotlin Toolkit |
-| PDF | Readium + adaptador PDFium (alternativa: MuPDF) |
+| PDF | `PdfRenderer` de Android (PDFium); alternativa: MuPDF |
 | Credenciales | Cifradas con Android Keystore |
 | Distribución | APK firmado, instalación manual |
 
@@ -98,7 +98,7 @@ catalog/        Cliente OPDS, búsqueda, paginación, metadatos y portadas
 downloads/      Transferencias, almacenamiento y reintentos
 library/        Libros descargados, progreso y marcadores (Room)
 reader-epub/    Lector EPUB (Readium)
-reader-pdf/     Lector PDF (Readium + PDFium)
+reader-pdf/     Lector PDF (PdfRenderer de Android)
 settings/       Preferencias y seguridad
 ```
 

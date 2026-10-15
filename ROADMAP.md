@@ -132,7 +132,7 @@ Objetivo: conectar con la biblioteca real. Cubre RF-01 a RF-05 y RF-09.
 - [x] Verificación de integridad: tamaño > 0 y coincidencia con `Content-Length`.
 - [x] Quitar del dispositivo con confirmación («no se borra del servidor»).
 - [x] Pruebas del gestor de descargas (corte de red, reintento, duplicado).
-- [x] Ficha del libro (RF-04): portada, autores, serie, valoración, sinopsis, etiquetas, idioma y estado de cada formato. «Leer» abre los EPUB en el lector propio; los PDF, en otra app hasta su lector (Fase 3).
+- [x] Ficha del libro (RF-04): portada, autores, serie, valoración, sinopsis, etiquetas, idioma y estado de cada formato. «Leer» abre los EPUB en el lector propio; los PDF, en el lector PDF propio.
 
 ### Sin conexión (RF-09)
 - [x] Descargas y ficha funcionan con el servidor caído. Probado en modo avión en el BOOX.
@@ -161,11 +161,11 @@ Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 - [x] Barra de progreso discreta y última posición recordada: capítulo, página y porcentaje en el menú; la posición se guarda en cada cambio de página. Probado en el BOOX.
 
 ### Lector PDF (RF-07)
-- [ ] Integrar el navegador PDF de Readium (o MuPDF según la Fase 0).
-- [ ] Ajuste al ancho por defecto con desplazamiento vertical; opción de página completa.
+- [x] Integrar un lector PDF. *Hecho con `PdfRenderer` de Android (PDFium) en vez del navegador PDF de Readium: este se apoya en AndroidPdfViewer, que desplaza con inercia y animaciones difíciles de quitar en E Ink. Cada página se pinta como imagen; paso de pantalla por toque en los bordes, deslizamiento o teclas, sin animación. Probado en el BOOX.*
+- [x] Ajuste al ancho por defecto con desplazamiento vertical; opción de página completa. *Hecho: al ancho se avanza por trozos de pantalla (repitiendo un 5 %) y se pasa a la página siguiente; página completa como opción. Además, recorte de márgenes en blanco. Probado en el BOOX.*
 - [ ] Zoom con gestos.
-- [ ] Número de página, progreso y última página recordada.
-- [ ] Renderizado fuera del hilo principal; probar con PDF técnicos pesados reales.
+- [x] Número de página, progreso y última página recordada. *Hecho: menú arriba con página y porcentaje, «Ir a página» y posición guardada en `reading_progress`. Probado en el BOOX.*
+- [ ] Renderizado fuera del hilo principal; probar con PDF técnicos pesados reales. *Se pinta en segundo plano y se deja lista la página siguiente; falta probar con PDF pesados.*
 
 ### Continuar leyendo (RF-08)
 - [ ] Bloque «Continuar leyendo» en Inicio con datos reales.

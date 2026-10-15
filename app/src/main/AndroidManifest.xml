@@ -33,15 +33,10 @@
             android:exported="false"
             android:screenOrientation="portrait" />
 
-        <!-- Deja abrir en otra app lo que aún no lee la propia (PDF, hasta su lector). -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.books"
+        <activity
+            android:name="com.bibliotecago.reader.pdf.PdfReaderActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|density"
             android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
+            android:screenOrientation="portrait" />
     </application>
 </manifest>

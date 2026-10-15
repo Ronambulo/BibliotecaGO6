@@ -1,8 +1,5 @@
 package com.bibliotecago.app.screens
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bibliotecago.app.appContainer
 import com.bibliotecago.catalog.CatalogRepository
@@ -44,14 +40,13 @@ import com.bibliotecago.core.model.BookId
 import com.bibliotecago.downloads.Download
 import com.bibliotecago.downloads.DownloadState
 import com.bibliotecago.reader.epub.EpubReaderActivity
-import java.io.File
+import com.bibliotecago.reader.pdf.PdfReaderActivity
 
 @Composable
 fun BookDetailScreen(bookId: BookId, onBack: () -> Unit, onOpenFeed: (href: String, title: String) -> Unit) {
     val container = LocalContext.current.appContainer
     val vm = viewModel(key = bookId.value) { BookDetailViewModel(container, bookId) }
     var confirmRemove by rememberSaveable { mutableStateOf<BookFormat?>(null) }
-    var cannotOpen by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
 
     Column(Modifier.fillMaxSize()) {
@@ -81,7 +76,7 @@ fun BookDetailScreen(bookId: BookId, onBack: () -> Unit, onOpenFeed: (href: Stri
                         onRead = { done ->
                             when (file.format) {
                                 BookFormat.EPUB -> context.startActivity(EpubReaderActivity.intent(context, done.file, book.id, book.title))
-                                BookFormat.PDF -> if (!openExternally(context, done.file, file.format)) cannotOpen = true
+                                BookFormat.PDF -> context.startActivity(PdfReaderActivity.intent(context, done.file, book.id, book.title))
                             }
                         },
                     )
@@ -114,17 +109,6 @@ fun BookDetailScreen(bookId: BookId, onBack: () -> Unit, onOpenFeed: (href: Stri
                 vm.remove(format)
                 confirmRemove = null
             },
-        )
-    }
-
-    if (cannotOpen) {
-        EinkDialog(
-            onDismissRequest = { cannotOpen = false },
-            title = "No se puede abrir",
-            text = "No hay ninguna app para leer PDF en este dispositivo.",
-            confirmLabel = "Entendido",
-            onConfirm = { cannotOpen = false },
-            dismissLabel = null,
         )
     }
 }
@@ -239,25 +223,4 @@ private fun Details(book: Book) {
         Spacer(Modifier.height(4.dp))
     }
     book.language?.let { EinkText("Idioma: ${languageName(it)}", style = EinkTheme.typography.caption) }
-}
-
-/**
- * Provisional hasta el lector de PDF: abre el archivo descargado en otra app
- * (en el BOOX, NeoReader).
- */
-private fun openExternally(context: Context, file: File, format: BookFormat): Boolean {
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.books", file)
-    val type = when (format) {
-        BookFormat.EPUB -> "application/epub+zip"
-        BookFormat.PDF -> "application/pdf"
-    }
-    val intent = Intent(Intent.ACTION_VIEW)
-        .setDataAndType(uri, type)
-        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    return try {
-        context.startActivity(intent)
-        true
-    } catch (_: ActivityNotFoundException) {
-        false
-    }
 }
