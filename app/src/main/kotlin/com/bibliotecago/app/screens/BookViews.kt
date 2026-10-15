@@ -3,6 +3,9 @@ package com.bibliotecago.app.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.bibliotecago.core.eink.PressIndication
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
@@ -62,6 +65,8 @@ fun BookCover(
     alignment: Alignment = Alignment.Center,
     corner: Dp = 10.dp,
     compact: Boolean = false,
+    /** Pulsaciones de la ficha que la contiene: el marco de pulsado va solo en la portada. */
+    pressSource: MutableInteractionSource? = null,
 ) {
     var ratio by remember(book.coverPath) { mutableStateOf<Float?>(null) }
     val colors = EinkTheme.colors
@@ -71,6 +76,7 @@ fun BookCover(
                 .aspectRatio(ratio ?: BOOK_RATIO)
                 .clip(RoundedCornerShape(corner))
                 .background(if (ratio == null) colors.surfaceStrong else colors.paper)
+                .then(if (pressSource != null) Modifier.indication(pressSource, PressIndication) else Modifier)
         ) {
             if (ratio == null && !compact) {
                 Column(
@@ -161,17 +167,18 @@ fun DownloadedTag(modifier: Modifier = Modifier) {
  */
 @Composable
 fun BookTile(book: Book, base: HttpUrl?, downloaded: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val press = remember { MutableInteractionSource() }
     Column(
         modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(press, indication = null, role = Role.Button, onClick = onClick),
     ) {
         BookCover(
             book, base,
             Modifier.weight(1f).fillMaxWidth(),
             downloaded = downloaded,
             alignment = Alignment.BottomCenter,
+            pressSource = press,
         )
         Spacer(Modifier.height(8.dp))
         EinkText(book.title, style = EinkTheme.typography.label.merge(fontSize = 14.sp, lineHeight = 18.sp), maxLines = 1)

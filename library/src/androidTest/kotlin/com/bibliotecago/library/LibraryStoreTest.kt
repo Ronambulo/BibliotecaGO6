@@ -10,7 +10,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -87,6 +89,39 @@ class LibraryStoreTest {
         store.bookmarks.delete(gone)
 
         assertEquals(listOf(keep), store.bookmarks.observe(DUNE, BookFormat.EPUB).first())
+    }
+
+    @Test
+    fun marcarYDesmarcarComoLeido() = runBlocking {
+        assertFalse(store.finished.observe(DUNE).first())
+
+        store.finished.set(DUNE, true)
+        store.finished.set(DUNE, true)
+
+        assertTrue(store.finished.observe(DUNE).first())
+        assertFalse(store.finished.observe(FUNDACION).first())
+        assertEquals(setOf(DUNE.value), store.finished.observeAll().first())
+
+        store.finished.set(DUNE, false)
+        assertFalse(store.finished.observe(DUNE).first())
+        assertEquals(emptySet<String>(), store.finished.observeAll().first())
+    }
+
+    @Test
+    fun losCambiosDeLeidoQuedanPendientesHastaEnviarlos() = runBlocking {
+        store.finished.set(DUNE, true)
+        val pending = store.finished.observePending().first().single()
+        assertTrue(pending.finished)
+
+        // Cambia otra vez mientras se enviaba: el envío viejo no lo da por sincronizado.
+        now = 2_000L
+        store.finished.set(DUNE, false)
+        store.finished.markSynced(pending)
+        val again = store.finished.observePending().first().single()
+        assertFalse(again.finished)
+
+        store.finished.markSynced(again)
+        assertTrue(store.finished.observePending().first().isEmpty())
     }
 
     @Test

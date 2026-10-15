@@ -1,6 +1,7 @@
 package com.bibliotecago.core.eink
 
 import androidx.compose.foundation.IndicationNodeFactory
+import androidx.compose.foundation.interaction.HoverInteraction
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.ui.Modifier
@@ -16,9 +17,11 @@ import androidx.compose.ui.node.invalidateDraw
 import kotlinx.coroutines.launch
 
 /**
- * Sustituye al ripple: mientras el elemento está pulsado se dibuja un marco
- * fino (tinta por fuera, papel por dentro) sin tocar el contenido. Las
- * portadas no cambian de color y E Ink solo refresca el borde.
+ * Sustituye al ripple: mientras el elemento está pulsado (o con el puntero
+ * encima) se dibuja un marco fino (tinta por fuera, papel por dentro) sin
+ * tocar el contenido. Las portadas no cambian de color y E Ink solo refresca
+ * el borde. Las fichas de libro lo ponen solo en la portada, con
+ * `Modifier.indication(source, PressIndication)`.
  */
 object PressIndication : IndicationNodeFactory {
     override fun create(interactionSource: InteractionSource): DelegatableNode =
@@ -33,6 +36,7 @@ private class PressNode(
 ) : Modifier.Node(), DrawModifierNode {
 
     private val presses = mutableSetOf<PressInteraction.Press>()
+    private val hovers = mutableSetOf<HoverInteraction.Enter>()
     private var pressed = false
 
     override fun onAttach() {
@@ -42,8 +46,10 @@ private class PressNode(
                     is PressInteraction.Press -> presses += interaction
                     is PressInteraction.Release -> presses -= interaction.press
                     is PressInteraction.Cancel -> presses -= interaction.press
+                    is HoverInteraction.Enter -> hovers += interaction
+                    is HoverInteraction.Exit -> hovers -= interaction.enter
                 }
-                val now = presses.isNotEmpty()
+                val now = presses.isNotEmpty() || hovers.isNotEmpty()
                 if (now != pressed) {
                     pressed = now
                     invalidateDraw()

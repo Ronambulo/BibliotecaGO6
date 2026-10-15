@@ -11,6 +11,7 @@ import com.bibliotecago.core.model.BookFormat
 import com.bibliotecago.core.model.BookId
 import com.bibliotecago.library.Bookmark
 import com.bibliotecago.library.bookmarks
+import com.bibliotecago.library.finishedBooks
 import com.bibliotecago.library.readingProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -83,6 +84,17 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
     /** Marcadores del libro, en orden de lectura. */
     val bookmarks: StateFlow<List<Bookmark>> = bookmarkStore.observe(bookId, BookFormat.EPUB)
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val finishedStore = application.finishedBooks
+
+    /** Si el libro está marcado como leído. */
+    val finished: StateFlow<Boolean> = finishedStore.observe(bookId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun toggleFinished() {
+        val now = !finished.value
+        viewModelScope.launch { finishedStore.set(bookId, now) }
+    }
 
     private val settingsStore = ReaderSettingsStore(application)
 

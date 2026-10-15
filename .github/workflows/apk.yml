@@ -1,0 +1,80 @@
+# Compila y publica el APK como artefacto en cada push.
+#
+# - Siempre: pruebas, lint, comprobación de animaciones y APK debug.
+# - Si existen los secretos de firma, además el APK release firmado, que es
+#   el que se instala en el BOOX y se actualiza encima sin perder el progreso.
+#
+# Secretos (Settings → Secrets and variables → Actions):
+#   KEYSTORE_BASE64     el .jks en base64 (`base64 -w0 bibliotecago.jks`)
+#   KEYSTORE_PASSWORD   contraseña del almacén
+#   KEY_ALIAS           alias de la clave (bibliotecago)
+#   KEY_PASSWORD        contraseña de la clave
+name: APK
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BIBLIOTECAGO_VERSION_CODE: ${{ github.run_number }}
+      HAS_SIGNING: ${{ secrets.KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Pruebas, lint y APK debug
+        run: ./gradlew testDebugUnitTest checkNoAnimations lintDebug assembleDebug --console=plain
+
+      - name: Preparar firma release
+        if: env.HAS_SIGNING == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          dir="$RUNNER_TEMP/signing"
+          mkdir -p "$dir"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$dir/bibliotecago.jks"
+          {
+            echo "storeFile=bibliotecago.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > "$dir/keystore.properties"
+          echo "BIBLIOTECAGO_SIGNING=$dir/keystore.properties" >> "$GITHUB_ENV"
+
+      - name: APK release firmado
+        if: env.HAS_SIGNING == 'true'
+        run: ./gradlew assembleRelease --console=plain
+
+      - name: Borrar la firma
+        if: always() && env.HAS_SIGNING == 'true'
+        run: rm -rf "$RUNNER_TEMP/signing"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BibliotecaGO-debug-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: env.HAS_SIGNING == 'true'
+        with:
+          name: BibliotecaGO-${{ github.run_number }}
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error

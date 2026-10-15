@@ -48,17 +48,22 @@ import kotlinx.coroutines.flow.combine
 private data class Reading(val book: Book, val format: BookFormat, val file: File, val progression: Double?)
 
 /**
- * Inicio: «Continuar leyendo» (RF-08). Solo libros empezados y descargados,
- * lo último leído primero; sale de Room, así que funciona sin conexión.
+ * Inicio: «Continuar leyendo» (RF-08). Solo libros empezados, descargados y
+ * no marcados como leídos, lo último leído primero; sale de Room, así que
+ * funciona sin conexión.
  */
 @Composable
 fun HomeScreen(onOpenLibrary: () -> Unit, onOpenDownloads: () -> Unit) {
     val context = LocalContext.current
     val container = context.appContainer
     val reading by remember(container) {
-        combine(container.library.progress.observeAll(), container.downloads.downloads) { progress, downloads ->
+        combine(
+            container.library.progress.observeAll(),
+            container.library.finished.observeAll(),
+            container.downloads.downloads,
+        ) { progress, finished, downloads ->
             val files = downloads.associateBy { it.book.id.value to it.format }
-            progress.mapNotNull { p ->
+            progress.filter { it.bookId !in finished }.mapNotNull { p ->
                 val download = files[p.bookId to p.format] ?: return@mapNotNull null
                 val done = download.state as? DownloadState.Done ?: return@mapNotNull null
                 Reading(download.book, p.format, done.file, p.progression)
@@ -105,9 +110,10 @@ fun HomeScreen(onOpenLibrary: () -> Unit, onOpenDownloads: () -> Unit) {
 /** El último libro leído, en grande: portada, progreso y «Seguir leyendo». */
 @Composable
 private fun Hero(reading: Reading, base: HttpUrl?, onOpen: () -> Unit) {
-    EinkCard(Modifier.fillMaxWidth().height(HERO_HEIGHT), onClick = onOpen, padding = 20.dp, corner = 24.dp) {
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    EinkCard(Modifier.fillMaxWidth().height(HERO_HEIGHT), onClick = onOpen, padding = 20.dp, corner = 24.dp, pressSource = press) {
         Row(Modifier.fillMaxSize()) {
-            BookCover(reading.book, base, Modifier.fillMaxHeight().width(124.dp), alignment = Alignment.TopStart)
+            BookCover(reading.book, base, Modifier.fillMaxHeight().width(124.dp), alignment = Alignment.TopStart, pressSource = press)
             Spacer(Modifier.width(18.dp))
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 EinkEyebrow("Continuar leyendo")
@@ -131,14 +137,15 @@ private fun Hero(reading: Reading, base: HttpUrl?, onOpen: () -> Unit) {
 
 @Composable
 private fun ReadingRow(reading: Reading, base: HttpUrl?, onClick: () -> Unit) {
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Row(
         Modifier
             .fillMaxWidth()
             .height(OTHER_HEIGHT)
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(press, indication = null, role = Role.Button, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BookCover(reading.book, base, Modifier.height(68.dp).width(46.dp), corner = 6.dp, compact = true)
+        BookCover(reading.book, base, Modifier.height(68.dp).width(46.dp), corner = 6.dp, compact = true, pressSource = press)
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             EinkText(reading.book.title, style = EinkTheme.typography.label.merge(fontSize = 17.sp), maxLines = 1)

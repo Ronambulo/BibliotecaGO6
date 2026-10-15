@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -160,12 +161,16 @@ private fun DownloadRow(
     onRetry: () -> Unit,
 ) {
     val state = download.state
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.weight(1f).fillMaxWidth().clickable(onClick = onClick),
+            Modifier.weight(1f).fillMaxWidth().clickable(press, indication = null, onClick = onClick),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BookCover(download.book, container.coverBase, Modifier.size(width = 52.dp, height = 78.dp), corner = 6.dp, compact = true)
+            BookCover(
+                download.book, container.coverBase, Modifier.size(width = 52.dp, height = 78.dp),
+                corner = 6.dp, compact = true, pressSource = press,
+            )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 EinkText(download.book.title, style = EinkTheme.typography.label, maxLines = 2)

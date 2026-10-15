@@ -283,12 +283,13 @@ class EpubReaderActivity : FragmentActivity() {
         }
     }
 
-    /** Franja de arriba: volver, título y autor, y marcador de la página actual. */
+    /** Franja de arriba: volver, título y autor, leído y marcador de la página actual. */
     @Composable
     private fun TopStrip() {
         if (!viewModel.controlsVisible) return
         val state by viewModel.state.collectAsState()
         val bookmarks by viewModel.bookmarks.collectAsState()
+        val finished by viewModel.finished.collectAsState()
         val author = (state as? ReaderState.Ready)?.publication?.metadata?.authors
             ?.joinToString { it.name }?.ifBlank { null }
         Column(Modifier.fillMaxWidth().background(EinkTheme.colors.paper)) {
@@ -305,6 +306,13 @@ class EpubReaderActivity : FragmentActivity() {
                     }
                 }
                 Spacer(Modifier.width(12.dp))
+                EinkIconButton(
+                    EinkIcons.Check,
+                    contentDescription = if (finished) "Quitar de leídos" else "Marcar como leído",
+                    onClick = viewModel::toggleFinished,
+                    selected = finished,
+                )
+                Spacer(Modifier.width(8.dp))
                 val marked = viewModel.bookmarkHere(bookmarks) != null
                 EinkIconButton(
                     if (marked) EinkIcons.BookmarkFilled else EinkIcons.Bookmark,

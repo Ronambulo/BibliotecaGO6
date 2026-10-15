@@ -169,6 +169,7 @@ Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 
 ### Continuar leyendo (RF-08)
 - [x] Bloque «Continuar leyendo» en Inicio con datos reales: el último libro leído en grande y hasta 3 libros empezados más debajo, solo si siguen descargados. Abre el lector directamente. *Sin probar en el BOOX.*
+- [x] Marcar un libro como leído desde el lector (botón junto al marcador, EPUB y PDF); sale de «Continuar leyendo». Se envía a Calibre-Web iniciando sesión en la web (OPDS no lo permite): al marcarlo, al arrancar y al volver la red; sin conexión queda pendiente en Room (`finished_books`, migración 2→3). Solo va de la app a Calibre-Web: lo marcado en la web no se trae a la app. *Sin probar contra el servidor real.*
 - [ ] Progreso persistente tras cerrar la app y reiniciar el dispositivo. *Se guarda en Room (`library.db`) y una prueba comprueba que sigue al cerrar y volver a abrir la base de datos; falta probar un reinicio de verdad en el BOOX.*
 - [x] Pruebas del repositorio de progreso y marcadores. Pruebas instrumentadas en `:library` con SQLite real (`connectedDebugAndroidTest`, en el emulador): guardar y sobrescribir progreso, un progreso por formato, orden de «Continuar leyendo», marcadores en orden de lectura y borrado, reapertura de la base de datos y migración 1→2 sin perder el progreso.
 
@@ -211,7 +212,7 @@ Objetivo: primera versión instalable.
 - [x] Pantalla de licencias de terceros. *En Ajustes → Acerca de: cada biblioteca que entra en el APK (sacadas de `releaseRuntimeClasspath` y del desazucarado) con autor y licencia, y la dirección de cada texto de licencia. Hay que mantenerla al añadir dependencias.*
 - [ ] Generar keystore de firma y **copia de seguridad** fuera del repositorio.
 - [x] Build `release` firmado (R8/minificación revisada con Readium). *Firma leída de un `keystore.properties` fuera del repositorio (`BIBLIOTECAGO_SIGNING` o `~/.bibliotecago/`), documentado en el README. R8 con recorte de recursos compila sin avisos con las reglas que traen las propias bibliotecas; firmado con la clave debug, arranca en el emulador. Falta crear la keystore real y probar los lectores con el release en el BOOX.*
-- [ ] Documentar instalación, actualización e instalación de nuevas versiones.
+- [x] Documentar instalación, actualización e instalación de nuevas versiones. *En el README: el workflow `APK` de GitHub Actions compila en cada push y deja el APK debug y, con los secretos de firma configurados, el release firmado como artefactos; `versionCode` = número de ejecución, para que cada APK se instale encima del anterior.*
 - [ ] Etiquetar `v1.0.0`.
 
 **Criterio de salida (v1.0):** APK firmado instalado en el BOOX y todos los criterios de aceptación marcados.

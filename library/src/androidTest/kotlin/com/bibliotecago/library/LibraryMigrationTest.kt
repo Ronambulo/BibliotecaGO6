@@ -39,6 +39,30 @@ class LibraryMigrationTest {
         }
     }
 
+    @Test
+    fun de2a3ConservaLoAnteriorYAnadeLeidos() {
+        helper.createDatabase(NAME, 2).apply {
+            execSQL("INSERT INTO reading_progress VALUES ('7', 'EPUB', 'loc', 0.25, 1000)")
+            execSQL("INSERT INTO bookmarks VALUES ('m', '7', 'EPUB', 'loc', NULL, NULL, 0.25, 1000, 1000)")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(NAME, 3, true)
+
+        db.query("SELECT COUNT(*) FROM reading_progress").use {
+            it.moveToFirst()
+            assertEquals(1, it.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM bookmarks").use {
+            it.moveToFirst()
+            assertEquals(1, it.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM finished_books").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+    }
+
     private companion object {
         const val NAME = "migracion-test.db"
     }

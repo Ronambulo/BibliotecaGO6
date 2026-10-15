@@ -32,6 +32,7 @@ La app **no sube ni modifica nada** en el servidor: consulta el catálogo por OP
 - **Lector EPUB** con tipografía, márgenes, tabla de contenidos, marcadores y búsqueda de texto.
 - **Lector PDF** con ajuste al ancho, página completa y zoom.
 - **Continuar leyendo**: posición y progreso guardados localmente.
+- **Marcar como leído** desde el lector; se marca también en Calibre-Web (al momento o, sin conexión, en cuanto vuelve la red).
 - **Modo sin conexión** para todos los libros descargados.
 - **Acceso remoto** a través de Cloudflare Tunnel (HTTPS) y URL local opcional en casa.
 
@@ -147,7 +148,7 @@ El release usa el id `com.bibliotecago` y el debug `com.bibliotecago.debug`, as�
 - Calibre-Web 0.6.27 en Docker Compose, con el volumen de la biblioteca montado **con escritura**.
 - OPDS accesible (normalmente en `/opds`) con autenticación básica.
 - Publicado en un hostname propio a través de **Cloudflare Tunnel**.
-- **Dos usuarios**: un administrador (navegador del PC) y un usuario de **solo lectura** para la app.
+- **Dos usuarios**: un administrador (navegador del PC) y un usuario de **solo lectura** para la app. Ese usuario tiene que poder iniciar sesión también en la web: el estado «leído» no se puede cambiar por OPDS y la app lo marca a través de la web (`/ajax/toggleread`). El estado es de ese usuario en Calibre-Web.
 - Registro público desactivado y limitador de intentos de login activado.
 - Regla de Cloudflare para **no cachear** `/opds` ni las descargas.
 - Copia de seguridad periódica de la biblioteca y de la configuración.
@@ -163,15 +164,49 @@ El release usa el id `com.bibliotecago` y el debug `com.bibliotecago.debug`, as�
 
 ## Instalación
 
-> Pendiente: se documentará en la Fase 5 (APK firmado, actualización y copia de seguridad de la clave de firma).
+### Conseguir el APK
 
-Resumen previsto:
+Cada push a GitHub lanza el workflow **APK** (`.github/workflows/apk.yml`): pasa las pruebas, el lint y la comprobación de animaciones, y deja el APK como artefacto de la ejecución. Para descargarlo: pestaña **Actions** del repositorio → la última ejecución en verde → sección **Artifacts**. GitHub lo entrega dentro de un `.zip`, y lo guarda 90 días.
 
-1. Descargar el APK firmado al BOOX Go 6.
-2. Permitir la instalación desde orígenes desconocidos para el gestor de archivos.
+| Artefacto | Qué es | Cuándo usarlo |
+|---|---|---|
+| `BibliotecaGO-N` | Release firmado con la clave propia (`com.bibliotecago`) | En el BOOX, para el uso diario |
+| `BibliotecaGO-debug-N` | Debug (`com.bibliotecago.debug`), firmado con una clave de depuración que cambia en cada ejecución | Solo para probar; no se actualiza encima del anterior |
+
+`N` es el número de la ejecución, que también es el `versionCode` del APK: cada uno es más nuevo que el anterior.
+
+El release solo aparece si están configurados los secretos de firma del repositorio (**Settings → Secrets and variables → Actions**), a partir de la misma clave que en [Build release firmado](#build-release-firmado):
+
+| Secreto | Valor |
+|---|---|
+| `KEYSTORE_BASE64` | El `.jks` en base64: `base64 -w0 bibliotecago.jks` (en Windows, `[Convert]::ToBase64String([IO.File]::ReadAllBytes("bibliotecago.jks"))`) |
+| `KEYSTORE_PASSWORD` | Contraseña del almacén |
+| `KEY_ALIAS` | Alias de la clave (`bibliotecago`) |
+| `KEY_PASSWORD` | Contraseña de la clave |
+
+El workflow escribe la clave en una carpeta temporal del runner, fuera del repositorio, y la borra al acabar.
+
+También se puede compilar en local con `./gradlew assembleRelease`.
+
+### Primera instalación en el BOOX Go 6
+
+1. Descomprimir el `.zip` y pasar `app-release.apk` al BOOX: por USB, desde **BOOXDrop** o descargándolo desde el navegador del propio BOOX.
+2. Abrir el APK con el gestor de archivos del BOOX. La primera vez, Android pide permitir **instalar aplicaciones desconocidas** para ese gestor: aceptarlo solo para él.
 3. Instalar y abrir **BibliotecaGO**.
-4. En **Ajustes**, introducir la URL del túnel, la URL local (opcional), el usuario de lectura y la contraseña, y pulsar **Probar conexión**.
-5. Configurar el modo de refresco recomendado para la app en los ajustes de BOOX.
+4. En **Ajustes → Servidor**, introducir la URL del túnel, la URL local (opcional), el usuario de lectura y la contraseña, y pulsar **Probar conexión**.
+5. En los ajustes de la app en BOOX (mantener pulsado el icono → **Optimizar**), elegir el modo de refresco **HD** o **Equilibrado** y activar el refresco completo cada pocas páginas para limpiar el ghosting.
+
+### Actualizar a una versión nueva
+
+1. Descargar el APK release más reciente desde **Actions**, como arriba.
+2. Abrirlo en el BOOX e **instalar encima**, sin desinstalar la versión anterior. Se conservan el progreso de lectura, los marcadores, los libros leídos, los libros descargados y la configuración del servidor.
+
+Para que Android acepte la actualización, el APK nuevo tiene que estar firmado con **la misma clave** y tener un `versionCode` igual o mayor. Si Android dice que la app «no se ha instalado» o que entra en conflicto con un paquete existente, casi siempre es una de estas dos causas:
+
+- Se intenta instalar un APK debug encima del release, o al revés. Son apps distintas (`com.bibliotecago.debug` y `com.bibliotecago`) y pueden convivir, pero no se actualizan entre sí.
+- La clave de firma no es la misma. Solo se arregla desinstalando, y entonces **se pierde** el progreso guardado en el dispositivo. Por eso hay que guardar copia de la keystore.
+
+Para volver a una versión anterior hay que desinstalar, porque Android no instala un `versionCode` menor encima de uno mayor.
 
 ---
 

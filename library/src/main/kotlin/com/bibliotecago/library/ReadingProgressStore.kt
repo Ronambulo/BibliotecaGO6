@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.bibliotecago.core.model.BookFormat
 import com.bibliotecago.core.model.BookId
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 /** Datos de lectura guardados en el dispositivo (Room, `library.db`). */
@@ -17,6 +18,7 @@ class LibraryStore internal constructor(database: LibraryDatabase, clock: () -> 
 
     val progress = ReadingProgressStore(database.progress(), clock)
     val bookmarks = BookmarkStore(database.bookmarks(), clock)
+    val finished = FinishedStore(database.finished(), clock)
 }
 
 internal const val DATABASE_NAME = "library.db"
@@ -57,6 +59,25 @@ class BookmarkStore internal constructor(private val dao: BookmarkDao, private v
     suspend fun delete(bookmark: Bookmark) = dao.delete(bookmark.id)
 }
 
+/** Libros marcados como leídos. */
+class FinishedStore internal constructor(private val dao: FinishedBookDao, private val clock: () -> Long) {
+
+    fun observe(bookId: BookId): Flow<Boolean> = dao.observe(bookId.value)
+
+    /** Ids de todos los libros leídos. */
+    fun observeAll(): Flow<Set<String>> = dao.observeIds().map { it.toSet() }
+
+    suspend fun set(bookId: BookId, finished: Boolean) {
+        dao.upsert(FinishedBook(bookId.value, finished, clock(), synced = false))
+    }
+
+    /** Cambios aún sin enviar a Calibre-Web, del más antiguo al más nuevo. */
+    fun observePending(): Flow<List<FinishedBook>> = dao.observePending()
+
+    /** Enviado: deja de estar pendiente, salvo que haya cambiado entretanto. */
+    suspend fun markSynced(book: FinishedBook) = dao.markSynced(book.bookId, book.updatedAt)
+}
+
 /**
  * Lo implementa la `Application`: así los lectores, que son actividades de
  * otros módulos, llegan al almacén sin depender de `:app`.
@@ -71,3 +92,5 @@ private val Context.library: LibraryStore
 val Context.readingProgress: ReadingProgressStore get() = library.progress
 
 val Context.bookmarks: BookmarkStore get() = library.bookmarks
+
+val Context.finishedBooks: FinishedStore get() = library.finished

@@ -16,6 +16,7 @@ import com.bibliotecago.downloads.DownloadsHost
 import com.bibliotecago.library.LibraryHost
 import com.bibliotecago.library.LibraryStore
 import com.bibliotecago.server.ServerConfigStore
+import com.bibliotecago.server.ReadStatusClient
 import com.bibliotecago.server.ServerConnection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,11 @@ class AppContainer(private val context: Context) {
     val books = BookCache()
     val library = LibraryStore(context)
 
+    /** Los libros marcados como leídos también se marcan en Calibre-Web. */
+    val readSync = ReadSync(library.finished, ReadStatusClient(connection)) { id ->
+        books[id] ?: downloads.savedBook(id)
+    }
+
     /**
      * Base para las portadas: la URL en uso o, sin conexión, la primera
      * configurada. Coil busca antes en su caché por la ruta, así que las
@@ -77,13 +83,18 @@ class AppContainer(private val context: Context) {
     }
 
     fun start() {
-        // Al cambiar de red (salir de casa, volver), se vuelve a probar primero la URL local.
+        // Al cambiar de red (salir de casa, volver), se vuelve a probar primero la URL local
+        // y se envía lo que estuviera pendiente.
         context.getSystemService(ConnectivityManager::class.java)?.registerDefaultNetworkCallback(
             object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) = connection.forgetEndpoint()
+                override fun onAvailable(network: Network) {
+                    connection.forgetEndpoint()
+                    readSync.retry()
+                }
             }
         )
         scope.launch { downloads.reconcile() }
+        readSync.start(scope)
     }
 }
 

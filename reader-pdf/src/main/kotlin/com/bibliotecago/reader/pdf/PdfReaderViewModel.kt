@@ -17,12 +17,15 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.bibliotecago.core.model.BookFormat
 import com.bibliotecago.core.model.BookId
+import com.bibliotecago.library.finishedBooks
 import com.bibliotecago.library.readingProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -57,6 +60,17 @@ class PdfReaderViewModel(application: Application, state: SavedStateHandle) : An
     val title: String = state.get<String>(EXTRA_TITLE).orEmpty()
 
     private val store = application.readingProgress
+
+    private val finishedStore = application.finishedBooks
+
+    /** Si el libro está marcado como leído. */
+    val finished: StateFlow<Boolean> = finishedStore.observe(bookId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun toggleFinished() {
+        val now = !finished.value
+        viewModelScope.launch { finishedStore.set(bookId, now) }
+    }
     private val settingsStore = PdfSettingsStore(application)
 
     private val _state = MutableStateFlow<PdfState>(PdfState.Opening)

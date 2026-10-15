@@ -26,7 +26,9 @@ android {
         applicationId = "com.bibliotecago"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 1
+        // En GitHub Actions sube con cada ejecución, para que cada APK pueda
+        // instalarse encima del anterior.
+        versionCode = System.getenv("BIBLIOTECAGO_VERSION_CODE")?.toInt() ?: 1
         versionName = "0.1.0"
     }
 

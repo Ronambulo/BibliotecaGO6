@@ -36,6 +36,9 @@ class ServerConnection(
 
     @Volatile private var choice: Choice? = null
 
+    /** Credenciales configuradas; las usa el inicio de sesión web de [ReadStatusClient]. */
+    val credentials: Credentials? get() = config()?.credentials
+
     /** Base en uso según la última petición, para resolver portadas y descargas. */
     val activeBase: HttpUrl? get() = choice?.takeIf { it.config == config() }?.base
 
@@ -63,6 +66,33 @@ class ServerConnection(
                 }
                 read(base, it)
             }
+        }
+        choice = null
+        val error = lastError ?: IOException("Sin URL")
+        throw ServerException(ConnectionProblem.fromException(error), error)
+    }
+
+    /**
+     * Para peticiones que no son del catálogo: ejecuta [block] con cada URL, en
+     * el mismo orden que [get], hasta que una no falle por la red. Un
+     * [ServerException] lanzado por [block] es definitivo.
+     */
+    suspend fun <T> withEndpoint(block: (base: HttpUrl, client: OkHttpClient) -> T): T = withContext(Dispatchers.IO) {
+        val cfg = config() ?: throw ServerException(ConnectionProblem.NotConfigured)
+        var lastError: IOException? = null
+        for (base in candidates(cfg)) {
+            val http = if (base == cfg.local) localClient else client
+            val result = try {
+                block(base, http)
+            } catch (e: ServerException) {
+                choice = Choice(cfg, base, clock())
+                throw e
+            } catch (e: IOException) {
+                lastError = e
+                continue
+            }
+            choice = Choice(cfg, base, clock())
+            return@withContext result
         }
         choice = null
         val error = lastError ?: IOException("Sin URL")

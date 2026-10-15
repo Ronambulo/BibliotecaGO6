@@ -422,12 +422,17 @@ fun EinkCard(
     onClick: (() -> Unit)? = null,
     padding: Dp = 18.dp,
     corner: Dp = EinkTheme.dimens.cardCorner,
+    /** Si se pasa, la tarjeta no dibuja el marco de pulsado: lo dibuja quien lo reciba (p. ej. la portada). */
+    pressSource: MutableInteractionSource? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val click = when {
+        onClick == null -> Modifier
+        pressSource != null -> Modifier.clickable(pressSource, indication = null, role = Role.Button, onClick = onClick)
+        else -> Modifier.clickable(role = Role.Button, onClick = onClick)
+    }
     EinkSurface(
-        modifier = modifier.then(
-            if (onClick != null) Modifier.clip(RoundedCornerShape(corner)).clickable(role = Role.Button, onClick = onClick) else Modifier
-        ),
+        modifier = modifier.then(if (onClick != null) Modifier.clip(RoundedCornerShape(corner)).then(click) else Modifier),
         tone = EinkTone.Surface,
         corner = corner,
     ) {
@@ -499,8 +504,9 @@ fun EinkSectionHeader(
 data class EinkBottomBarItem(val label: String, val icon: ImageVector)
 
 /**
- * Barra inferior de 72 dp. El destino activo lleva el icono dentro de una
- * píldora negra y la etiqueta en negrita: dos señales que no dependen del gris.
+ * Barra inferior de 72 dp. El destino activo lleva una barra negra arriba,
+ * pegada a la línea separadora, y la etiqueta en negrita; los demás van en
+ * gris. Dos señales que no dependen solo del gris.
  */
 @Composable
 fun EinkBottomBar(
@@ -515,30 +521,38 @@ fun EinkBottomBar(
         Row(Modifier.fillMaxWidth().height(72.dp)) {
             items.forEachIndexed { index, item ->
                 val selected = index == selectedIndex
-                Column(
+                Box(
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
                         .toggleable(value = selected, role = Role.Tab, indication = null, interactionSource = null) { onSelect(index) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
                 ) {
-                    EinkSurface(
-                        Modifier.size(width = 60.dp, height = 32.dp),
-                        tone = if (selected) EinkTone.Ink else EinkTone.Paper,
-                        corner = 16.dp,
-                    ) {
-                        EinkIcon(item.icon, contentDescription = null, modifier = Modifier.align(Alignment.Center), size = 22.dp)
+                    if (selected) {
+                        Box(
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .size(width = 56.dp, height = 4.dp)
+                                .background(colors.ink, RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
+                        )
                     }
-                    Spacer(Modifier.height(4.dp))
-                    EinkText(
-                        item.label,
-                        style = EinkTheme.typography.eyebrow.merge(
-                            letterSpacing = EinkTheme.typography.caption.letterSpacing,
-                            fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium,
-                        ),
-                        maxLines = 1,
-                    )
+                    CompositionLocalProvider(LocalEinkContentColor provides if (selected) colors.ink else colors.muted) {
+                        Column(
+                            Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            EinkIcon(item.icon, contentDescription = null, size = 24.dp)
+                            Spacer(Modifier.height(6.dp))
+                            EinkText(
+                                item.label,
+                                style = EinkTheme.typography.eyebrow.merge(
+                                    letterSpacing = EinkTheme.typography.caption.letterSpacing,
+                                    fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium,
+                                ),
+                                color = if (selected) colors.ink else colors.muted,
+                                maxLines = 1,
+                            )
+                        }
+                    }
                 }
             }
         }

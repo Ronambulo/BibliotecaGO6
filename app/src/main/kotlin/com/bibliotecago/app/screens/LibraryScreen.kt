@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,7 +22,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -252,14 +250,14 @@ fun MoreFailed(problem: ConnectionProblem, onRetry: () -> Unit) {
 /** Fila de la vista de lista: portada pequeña, título, autor y formatos. */
 @Composable
 private fun BookRow(book: Book, base: okhttp3.HttpUrl?, downloaded: Boolean, onClick: () -> Unit) {
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Row(
         Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(press, indication = null, role = Role.Button, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BookCover(book, base, Modifier.fillMaxSize().weight(0.16f), corner = 6.dp, compact = true)
+        BookCover(book, base, Modifier.fillMaxSize().weight(0.16f), corner = 6.dp, compact = true, pressSource = press)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             EinkText(book.title, style = EinkTheme.typography.label, maxLines = 1)

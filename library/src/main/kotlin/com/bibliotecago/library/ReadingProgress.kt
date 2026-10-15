@@ -40,12 +40,13 @@ internal interface ReadingProgressDao {
 }
 
 @Database(
-    entities = [ReadingProgress::class, Bookmark::class],
-    version = 2,
+    entities = [ReadingProgress::class, Bookmark::class, FinishedBook::class],
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 internal abstract class LibraryDatabase : RoomDatabase() {
     abstract fun progress(): ReadingProgressDao
     abstract fun bookmarks(): BookmarkDao
+    abstract fun finished(): FinishedBookDao
 }

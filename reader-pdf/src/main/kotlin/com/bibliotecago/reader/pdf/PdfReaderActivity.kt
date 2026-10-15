@@ -219,9 +219,10 @@ class PdfReaderActivity : ComponentActivity() {
         }
     }
 
-    /** Franja de arriba: volver y título. */
+    /** Franja de arriba: volver, título y leído. */
     @Composable
     private fun TopStrip(modifier: Modifier) {
+        val finished by viewModel.finished.collectAsState()
         Column(modifier.fillMaxWidth().background(EinkTheme.colors.paper).blockTouches()) {
             Row(
                 Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp),
@@ -230,6 +231,13 @@ class PdfReaderActivity : ComponentActivity() {
                 EinkIconButton(EinkIcons.Back, contentDescription = "Cerrar libro", onClick = ::finish)
                 Spacer(Modifier.width(12.dp))
                 EinkText(viewModel.title, Modifier.weight(1f), style = EinkTheme.typography.label, maxLines = 2)
+                Spacer(Modifier.width(12.dp))
+                EinkIconButton(
+                    EinkIcons.Check,
+                    contentDescription = if (finished) "Quitar de leídos" else "Marcar como leído",
+                    onClick = viewModel::toggleFinished,
+                    selected = finished,
+                )
             }
             EinkDivider()
         }
