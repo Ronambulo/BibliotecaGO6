@@ -9,11 +9,15 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.bibliotecago.core.model.BookFormat
 import com.bibliotecago.core.model.BookId
+import com.bibliotecago.library.Bookmark
+import com.bibliotecago.library.bookmarks
 import com.bibliotecago.library.readingProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -32,7 +36,7 @@ sealed interface ReaderState {
     data class Failed(val message: String) : ReaderState
 }
 
-enum class ReaderPanel { None, Text, Contents }
+enum class ReaderPanel { None, Text, Contents, Bookmarks }
 
 /**
  * Abre el EPUB con Readium y guarda la posición en cada cambio de página. Vive
@@ -57,6 +61,12 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
 
     /** Panel abierto sobre el libro, además del menú. */
     var panel by mutableStateOf(ReaderPanel.None)
+
+    private val bookmarkStore = application.bookmarks
+
+    /** Marcadores del libro, en orden de lectura. */
+    val bookmarks: StateFlow<List<Bookmark>> = bookmarkStore.observe(bookId, BookFormat.EPUB)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val settingsStore = ReaderSettingsStore(application)
 
@@ -98,6 +108,36 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
         }
     }
 
+    /** Marcador de la página que se ve, si lo hay. */
+    fun bookmarkHere(bookmarks: List<Bookmark>, here: Locator? = locator): Bookmark? {
+        here ?: return null
+        return bookmarks.firstOrNull { bookmark -> bookmark.toLocator()?.let { samePage(it, here) } == true }
+    }
+
+    /** Marca la página actual o, si ya lo estaba, le quita el marcador. */
+    fun toggleBookmark() {
+        val here = locator ?: return
+        val existing = bookmarkHere(bookmarks.value, here)
+        viewModelScope.launch {
+            if (existing != null) {
+                bookmarkStore.delete(existing)
+            } else {
+                bookmarkStore.add(
+                    bookId,
+                    BookFormat.EPUB,
+                    here.toJSON().toString(),
+                    title = here.title,
+                    text = here.text.highlight?.trim()?.replace(Regex("\\s+"), " ")?.take(BOOKMARK_TEXT),
+                    progression = here.locations.totalProgression,
+                )
+            }
+        }
+    }
+
+    fun deleteBookmark(bookmark: Bookmark) {
+        viewModelScope.launch { bookmarkStore.delete(bookmark) }
+    }
+
     override fun onCleared() {
         (_state.value as? ReaderState.Ready)?.publication?.close()
     }
@@ -106,5 +146,20 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
         const val EXTRA_PATH = "path"
         const val EXTRA_BOOK_ID = "bookId"
         const val EXTRA_TITLE = "title"
+
+        private const val BOOKMARK_TEXT = 160
     }
+}
+
+fun Bookmark.toLocator(): Locator? = runCatching { Locator.fromJSON(JSONObject(locator)) }.getOrNull()
+
+/**
+ * Misma página: mismo archivo y misma posición de Readium (unos 1024
+ * caracteres). Una pantalla puede abarcar dos posiciones; vale como aproximación.
+ */
+private fun samePage(a: Locator, b: Locator): Boolean {
+    if (a.href.toString() != b.href.toString()) return false
+    val pa = a.locations.position
+    val pb = b.locations.position
+    return if (pa != null && pb != null) pa == pb else a.locations.progression == b.locations.progression
 }

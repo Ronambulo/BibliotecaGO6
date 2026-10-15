@@ -14,7 +14,7 @@ import com.bibliotecago.core.model.BookId
 import com.bibliotecago.downloads.DownloadManager
 import com.bibliotecago.downloads.DownloadsHost
 import com.bibliotecago.library.LibraryHost
-import com.bibliotecago.library.ReadingProgressStore
+import com.bibliotecago.library.LibraryStore
 import com.bibliotecago.server.ServerConfigStore
 import com.bibliotecago.server.ServerConnection
 import kotlinx.coroutines.CoroutineScope
@@ -33,7 +33,7 @@ class BibliotecaApplication : Application(), SingletonImageLoader.Factory, Downl
     val container: AppContainer by lazy { AppContainer(this) }
 
     override val downloadManager: DownloadManager get() = container.downloads
-    override val readingProgress: ReadingProgressStore get() = container.readingProgress
+    override val library: LibraryStore get() = container.library
 
     override fun onCreate() {
         super.onCreate()
@@ -54,7 +54,7 @@ class AppContainer(private val context: Context) {
     val catalog = CatalogRepository(connection)
     val downloads = DownloadManager(context, connection)
     val books = BookCache()
-    val readingProgress = ReadingProgressStore(context)
+    val library = LibraryStore(context)
 
     /**
      * Base para las portadas: la URL en uso o, sin conexión, la primera

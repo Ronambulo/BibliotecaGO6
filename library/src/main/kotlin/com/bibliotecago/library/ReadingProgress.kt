@@ -1,5 +1,6 @@
 package com.bibliotecago.library
 
+import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -38,7 +39,13 @@ internal interface ReadingProgressDao {
     suspend fun delete(bookId: String, format: BookFormat)
 }
 
-@Database(entities = [ReadingProgress::class], version = 1, exportSchema = true)
+@Database(
+    entities = [ReadingProgress::class, Bookmark::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 internal abstract class LibraryDatabase : RoomDatabase() {
     abstract fun progress(): ReadingProgressDao
+    abstract fun bookmarks(): BookmarkDao
 }

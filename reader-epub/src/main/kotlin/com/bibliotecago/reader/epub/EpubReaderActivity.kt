@@ -16,8 +16,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,7 +28,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +47,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.bibliotecago.core.eink.EinkButton
+import com.bibliotecago.core.eink.EinkDialog
 import com.bibliotecago.core.eink.EinkDivider
 import com.bibliotecago.core.eink.EinkIconButton
 import com.bibliotecago.core.eink.EinkIcons
@@ -53,6 +58,7 @@ import com.bibliotecago.core.eink.EinkTheme
 import com.bibliotecago.core.eink.EinkTopBar
 import com.bibliotecago.core.eink.rememberEinkPageState
 import com.bibliotecago.core.model.BookId
+import com.bibliotecago.library.Bookmark
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
@@ -110,7 +116,8 @@ class EpubReaderActivity : FragmentActivity() {
                 launch {
                     combine(viewModel.state, snapshotFlow { viewModel.panel }, ::Pair).collect { (state, panel) ->
                         val ready = state is ReaderState.Ready
-                        overlay.visibility = if (!ready || panel == ReaderPanel.Contents) View.VISIBLE else View.GONE
+                        val fullScreen = panel == ReaderPanel.Contents || panel == ReaderPanel.Bookmarks
+                        overlay.visibility = if (!ready || fullScreen) View.VISIBLE else View.GONE
                         if (ready) showNavigator()
                     }
                 }
@@ -167,6 +174,15 @@ class EpubReaderActivity : FragmentActivity() {
 
     private fun openLink(link: Link) {
         navigator()?.go(link, animated = false)
+        closePanels()
+    }
+
+    private fun openLocator(locator: Locator) {
+        navigator()?.go(locator, animated = false)
+        closePanels()
+    }
+
+    private fun closePanels() {
         viewModel.panel = ReaderPanel.None
         viewModel.controlsVisible = false
     }
@@ -205,6 +221,7 @@ class EpubReaderActivity : FragmentActivity() {
         if (!viewModel.controlsVisible) return
         val state by viewModel.state.collectAsState()
         val total = (state as? ReaderState.Ready)?.positionCount ?: 0
+        val bookmarks by viewModel.bookmarks.collectAsState()
         Column(Modifier.fillMaxWidth().background(EinkTheme.colors.paper)) {
             EinkDivider(thickness = EinkTheme.dimens.border)
             if (viewModel.panel == ReaderPanel.Text) {
@@ -235,6 +252,13 @@ class EpubReaderActivity : FragmentActivity() {
                 EinkIconButton(EinkIcons.Back, contentDescription = "Cerrar libro", onClick = ::finish)
                 Spacer(Modifier.width(4.dp))
                 EinkText(viewModel.title, Modifier.weight(1f), style = EinkTheme.typography.heading, maxLines = 1)
+                val marked = viewModel.bookmarkHere(bookmarks) != null
+                EinkIconButton(
+                    if (marked) EinkIcons.BookmarkFilled else EinkIcons.Bookmark,
+                    contentDescription = if (marked) "Quitar marcador" else "Añadir marcador",
+                    onClick = viewModel::toggleBookmark,
+                    enabled = viewModel.locator != null,
+                )
                 EinkIconButton(EinkIcons.List, contentDescription = "Índice", onClick = { viewModel.panel = ReaderPanel.Contents })
                 EinkIconButton(
                     EinkIcons.Settings,
@@ -315,49 +339,135 @@ class EpubReaderActivity : FragmentActivity() {
                     actionLabel = "Volver",
                     onAction = ::finish,
                 )
-                is ReaderState.Ready -> if (viewModel.panel == ReaderPanel.Contents) Contents(s)
+                is ReaderState.Ready -> when (viewModel.panel) {
+                    ReaderPanel.Contents, ReaderPanel.Bookmarks -> Navigation(s)
+                    else -> Unit
+                }
                 ReaderState.Opening -> EinkMessage("Abriendo libro…")
             }
         }
     }
 
+    /** Índice y marcadores, a pantalla completa, con pestañas para pasar de uno a otro. */
+    @Composable
+    private fun Navigation(ready: ReaderState.Ready) {
+        Column(Modifier.fillMaxSize()) {
+            EinkTopBar(title = viewModel.title, onBack = { viewModel.panel = ReaderPanel.None })
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = EinkTheme.dimens.gutter, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf("Índice" to ReaderPanel.Contents, "Marcadores" to ReaderPanel.Bookmarks).forEach { (label, panel) ->
+                    EinkButton(
+                        label,
+                        { viewModel.panel = panel },
+                        Modifier.weight(1f),
+                        primary = viewModel.panel == panel,
+                    )
+                }
+            }
+            EinkDivider()
+            if (viewModel.panel == ReaderPanel.Bookmarks) Bookmarks() else Contents(ready)
+        }
+    }
+
     /** Índice paginado, abierto en la página del capítulo actual. */
     @Composable
-    private fun Contents(ready: ReaderState.Ready) {
+    private fun ColumnScope.Contents(ready: ReaderState.Ready) {
         val entries = remember(ready) { tocEntries(ready.publication.tableOfContents) }
         val current = remember(entries) { viewModel.locator?.let { currentEntry(entries, it) } ?: -1 }
-        Column(Modifier.fillMaxSize()) {
-            EinkTopBar(title = "Índice", onBack = { viewModel.panel = ReaderPanel.None })
-            if (entries.isEmpty()) {
-                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    EinkMessage("Sin índice", message = "Este libro no trae tabla de contenidos.")
-                }
-            } else {
-                val page = rememberEinkPageState(initialPage = maxOf(current, 0) / TOC_ROWS)
-                EinkPagedGrid(
-                    items = entries.withIndex().toList(),
-                    columns = 1,
-                    rows = TOC_ROWS,
-                    state = page,
-                    modifier = Modifier.weight(1f),
-                ) { (index, entry) ->
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .clickable { openLink(entry.link) }
-                            .padding(start = 20.dp * entry.depth),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
-                        val title = entry.link.title?.ifBlank { null } ?: "Sin título"
-                        EinkText(
-                            if (index == current) "▸ $title" else title,
-                            style = if (index == current) EinkTheme.typography.label else EinkTheme.typography.body,
-                            maxLines = 2,
-                        )
-                    }
+        if (entries.isEmpty()) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                EinkMessage("Sin índice", message = "Este libro no trae tabla de contenidos.")
+            }
+        } else {
+            val page = rememberEinkPageState(initialPage = maxOf(current, 0) / TOC_ROWS)
+            EinkPagedGrid(
+                items = entries.withIndex().toList(),
+                columns = 1,
+                rows = TOC_ROWS,
+                state = page,
+                modifier = Modifier.weight(1f),
+            ) { (index, entry) ->
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clickable { openLink(entry.link) }
+                        .padding(start = 20.dp * entry.depth),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    val title = entry.link.title?.ifBlank { null } ?: "Sin título"
+                    EinkText(
+                        if (index == current) "▸ $title" else title,
+                        style = if (index == current) EinkTheme.typography.label else EinkTheme.typography.body,
+                        maxLines = 2,
+                    )
                 }
             }
         }
+    }
+
+    /** Marcadores en orden de lectura: tocar uno lleva a su página; la equis lo borra, tras confirmar. */
+    @Composable
+    private fun ColumnScope.Bookmarks() {
+        val bookmarks by viewModel.bookmarks.collectAsState()
+        var deleting by remember { mutableStateOf<Bookmark?>(null) }
+        if (bookmarks.isEmpty()) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                EinkMessage("Sin marcadores", message = "Toca el marcador del menú para guardar la página actual.")
+            }
+        } else {
+            val here = viewModel.bookmarkHere(bookmarks)
+            val start = bookmarks.indexOf(here).coerceAtLeast(0)
+            EinkPagedGrid(
+                items = bookmarks,
+                columns = 1,
+                rows = BOOKMARK_ROWS,
+                state = rememberEinkPageState(initialPage = start / BOOKMARK_ROWS),
+                modifier = Modifier.weight(1f),
+                key = { it.id },
+            ) { bookmark ->
+                Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable { bookmark.toLocator()?.let(::openLocator) },
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        val title = bookmark.title?.ifBlank { null } ?: "Sin capítulo"
+                        EinkText(
+                            if (bookmark == here) "▸ $title" else title,
+                            style = EinkTheme.typography.label,
+                            maxLines = 1,
+                        )
+                        bookmark.text?.ifBlank { null }?.let {
+                            EinkText("«$it»", style = EinkTheme.typography.caption, maxLines = 2)
+                        }
+                        EinkText(bookmarkPlace(bookmark), style = EinkTheme.typography.caption, color = EinkTheme.colors.muted)
+                    }
+                    EinkIconButton(EinkIcons.Close, contentDescription = "Borrar marcador", onClick = { deleting = bookmark })
+                }
+            }
+        }
+        deleting?.let { bookmark ->
+            EinkDialog(
+                onDismissRequest = { deleting = null },
+                title = "¿Borrar el marcador?",
+                confirmLabel = "Borrar",
+                onConfirm = {
+                    viewModel.deleteBookmark(bookmark)
+                    deleting = null
+                },
+                text = bookmark.title,
+            )
+        }
+    }
+
+    private fun bookmarkPlace(bookmark: Bookmark): String {
+        val position = bookmark.toLocator()?.locations?.position
+        val percent = bookmark.progression?.let { "${(it * 100).roundToInt()} %" }
+        return listOfNotNull(position?.let { "Página $it" }, percent).joinToString(" · ")
     }
 
     private class TocEntry(val link: Link, val depth: Int)
@@ -374,6 +484,7 @@ class EpubReaderActivity : FragmentActivity() {
     companion object {
         private const val NAVIGATOR_TAG = "navigator"
         private const val TOC_ROWS = 10
+        private const val BOOKMARK_ROWS = 6
 
         fun intent(context: Context, file: File, bookId: BookId, title: String): Intent =
             Intent(context, EpubReaderActivity::class.java)

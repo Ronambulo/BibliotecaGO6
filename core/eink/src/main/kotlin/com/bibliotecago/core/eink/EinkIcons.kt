@@ -91,8 +91,16 @@ object EinkIcons {
         rect(3.5f, 11f, 5.5f, 13f)
         rect(3.5f, 17f, 5.5f, 19f)
     }
+    /** Cinta de marcapáginas. */
+    val Bookmark = icon("Bookmark") { bookmark() }
+    /** Marcador relleno: la página ya está marcada. */
+    val BookmarkFilled = icon("BookmarkFilled", filled = true) { bookmark() }
 
-    private fun icon(name: String, block: PathBuilder.() -> Unit): ImageVector =
+    private fun PathBuilder.bookmark() {
+        moveTo(6.5f, 3.5f); lineTo(17.5f, 3.5f); lineTo(17.5f, 20.5f); lineTo(12f, 16f); lineTo(6.5f, 20.5f); close()
+    }
+
+    private fun icon(name: String, filled: Boolean = false, block: PathBuilder.() -> Unit): ImageVector =
         ImageVector.Builder(
             name = name,
             defaultWidth = 24.dp,
@@ -100,6 +108,7 @@ object EinkIcons {
             viewportWidth = 24f,
             viewportHeight = 24f,
         ).path(
+            fill = if (filled) SolidColor(Color.Black) else null,
             stroke = SolidColor(Color.Black),
             strokeLineWidth = 2f,
             strokeLineCap = StrokeCap.Round,

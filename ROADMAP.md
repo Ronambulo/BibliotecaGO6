@@ -150,13 +150,13 @@ Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 - [ ] Pantalla de lector a pantalla completa, sin barra inferior.
 - [x] Controles que aparecen y se ocultan al tocar el centro, en un menú abajo (volver, título, capítulo, página y porcentaje). Probado en el BOOX.
 - [x] Paso de página por toque en los laterales y por deslizamiento, **sin animación** (el deslizamiento de Readium se intercepta y pasa página de golpe). Probado en el BOOX.
-- [ ] Esquema Room para progreso (`Locator` de Readium + fecha) y marcadores, preparado para sincronizar en el futuro (ids estables, `updatedAt`). *Progreso hecho en `:library` (`library.db`, `reading_progress`); faltan los marcadores.*
+- [x] Esquema Room para progreso (`Locator` de Readium + fecha) y marcadores, preparado para sincronizar en el futuro (ids estables, `updatedAt`). En `:library` (`library.db`): `reading_progress` y `bookmarks` (id UUID, `updatedAt`); migración automática 1→2 que conserva el progreso.
 
 ### Lector EPUB (RF-06)
 - [x] Integrar el navegador EPUB de Readium con paginación sin animación. Probado en el BOOX.
 - [x] Preferencias: tamaño de letra, fuente, márgenes, interlineado, tema claro (y oscuro si se ve bien). Panel «Texto» en el menú, común a todos los libros. Probado en el BOOX.
 - [x] Tabla de contenidos: «Índice» paginado, abre en el capítulo actual. Probado en el BOOX.
-- [ ] Marcadores: crear, listar, saltar y eliminar.
+- [x] Marcadores: crear, listar, saltar y eliminar. Botón de marcador en el menú (relleno si la página ya está marcada; tocarlo otra vez lo quita) y pestaña «Marcadores» junto al «Índice», con capítulo, texto, página y porcentaje; borrar pide confirmación. *Sin probar en el BOOX.*
 - [ ] Búsqueda de texto dentro del libro.
 - [x] Barra de progreso discreta y última posición recordada: capítulo, página y porcentaje en el menú; la posición se guarda en cada cambio de página. Probado en el BOOX.
 
