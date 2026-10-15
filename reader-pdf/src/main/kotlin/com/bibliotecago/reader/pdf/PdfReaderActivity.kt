@@ -48,6 +48,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -71,7 +72,8 @@ import kotlin.math.roundToInt
 /**
  * Lector PDF. Cada página se pinta como imagen y se muestra entera o, al
  * ancho, por trozos. Toques en los bordes y deslizamientos pasan pantalla sin
- * animación; un toque en el centro muestra el menú.
+ * animación; un toque en el centro muestra el menú. Pellizcar o tocar dos
+ * veces en el centro amplía la página.
  */
 class PdfReaderActivity : ComponentActivity() {
 
@@ -155,37 +157,62 @@ class PdfReaderActivity : ComponentActivity() {
     /**
      * Toques y deslizamientos, sin que la página siga al dedo: se mira el gesto
      * entero y al soltar se decide. Bordes (30 %) y deslizamientos pasan
-     * pantalla; el centro abre o cierra el menú.
+     * pantalla; el centro abre o cierra el menú, y dos toques seguidos en el
+     * centro amplían o vuelven a la página entera. Pellizcar cambia el zoom al
+     * soltar; con zoom, arrastrar mueve la página en vez de pasarla.
      */
     private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectPageGestures() {
         val minSwipe = 48.dp.toPx()
         awaitEachGesture {
             val down = awaitFirstDown()
-            var multiTouch = false
             var end = down.position
+            var pinchStart = 0f
+            var pinchEnd = 0f
+            var focus = Offset.Zero
             while (true) {
                 val event = awaitPointerEvent()
-                if (event.changes.size > 1) multiTouch = true
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                end = change.position
-                if (!change.pressed) break
+                val pressed = event.changes.filter { it.pressed }
+                if (pressed.size >= 2) {
+                    val span = (pressed[0].position - pressed[1].position).getDistance()
+                    if (pinchStart == 0f) {
+                        pinchStart = span
+                        focus = (pressed[0].position + pressed[1].position) / 2f
+                    }
+                    pinchEnd = span
+                }
+                event.changes.firstOrNull { it.id == down.id }?.let { end = it.position }
+                if (pressed.isEmpty()) break
             }
-            if (multiTouch) return@awaitEachGesture
+            if (pinchStart > 0f) {
+                viewModel.pinch(pinchEnd / pinchStart, focus)
+                return@awaitEachGesture
+            }
             val dx = end.x - down.position.x
             val dy = end.y - down.position.y
             val slop = viewConfiguration.touchSlop
+            val zoomed = viewModel.zoom > 1f
             when {
                 abs(dx) < slop && abs(dy) < slop -> {
                     val fraction = down.position.x / size.width
                     when {
                         fraction < EDGE -> viewModel.previous()
                         fraction > 1 - EDGE -> viewModel.next()
-                        else -> {
-                            viewModel.controlsVisible = !viewModel.controlsVisible
+                        // Con el menú abierto no se espera al segundo toque: se cierra ya.
+                        viewModel.controlsVisible -> {
+                            viewModel.controlsVisible = false
                             viewModel.panel = PdfPanel.None
+                        }
+                        else -> {
+                            val second = withTimeoutOrNull(viewConfiguration.doubleTapTimeoutMillis) { awaitFirstDown() }
+                            if (second != null && (second.position - down.position).getDistance() < DOUBLE_TAP_SLOP.dp.toPx()) {
+                                viewModel.toggleZoom(down.position)
+                            } else {
+                                viewModel.controlsVisible = true
+                            }
                         }
                     }
                 }
+                zoomed -> viewModel.pan(dx, dy)
                 abs(dx) >= abs(dy) && abs(dx) >= minSwipe -> if (dx < 0) viewModel.next() else viewModel.previous()
                 abs(dy) > abs(dx) && abs(dy) >= minSwipe -> if (dy < 0) viewModel.next() else viewModel.previous()
             }
@@ -230,8 +257,10 @@ class PdfReaderActivity : ComponentActivity() {
                         Modifier.weight(1f),
                         style = EinkTheme.typography.label,
                     )
+                    val zoom = viewModel.zoom
                     EinkText(
-                        "${(viewModel.progression * 100).roundToInt()} %",
+                        if (zoom > 1f) "Zoom ${formatZoom(zoom)} · ${(viewModel.progression * 100).roundToInt()} %"
+                        else "${(viewModel.progression * 100).roundToInt()} %",
                         style = EinkTheme.typography.caption,
                         color = EinkTheme.colors.muted,
                     )
@@ -391,6 +420,10 @@ class PdfReaderActivity : ComponentActivity() {
         }
     }
 
+    /** «2×» o «1,5×». */
+    private fun formatZoom(zoom: Float): String =
+        if (zoom % 1f == 0f) "${zoom.toInt()}×" else "${zoom.toString().replace('.', ',')}×"
+
     /** Lo que se toque aquí sin pulsar un botón no llega a la página de debajo. */
     private fun Modifier.blockTouches() = pointerInput(Unit) {
         awaitEachGesture { awaitFirstDown(requireUnconsumed = false) }
@@ -399,6 +432,8 @@ class PdfReaderActivity : ComponentActivity() {
     companion object {
         /** Ancho de cada borde que pasa página, como fracción de la pantalla. */
         private const val EDGE = 0.3f
+        /** Distancia máxima, en dp, entre los dos toques de un doble toque. */
+        private const val DOUBLE_TAP_SLOP = 48
         private const val BACKSPACE = "⌫"
         private const val GO = "ir"
 

@@ -9,6 +9,7 @@ import android.os.ParcelFileDescriptor
 import androidx.core.graphics.createBitmap
 import java.io.Closeable
 import java.io.File
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -36,12 +37,8 @@ internal class PdfDocument private constructor(
     fun render(index: Int, width: Int, height: Int, fit: PdfFit, crop: Boolean): Bitmap = synchronized(renderer) {
         check(!closed) { "PDF cerrado" }
         renderer.openPage(index).use { page ->
-            val full = RectF(0f, 0f, page.width.toFloat(), page.height.toFloat())
-            val bounds = if (crop) contentBounds[index] ?: findContent(page).also { contentBounds[index] = it } else full
-            val scale = when (fit) {
-                PdfFit.Width -> width / bounds.width()
-                PdfFit.Page -> min(width / bounds.width(), height / bounds.height())
-            }
+            val bounds = bounds(page, index, crop)
+            val scale = fitScale(bounds, width, height, fit)
             val bitmapWidth = (bounds.width() * scale).roundToInt().coerceIn(1, width)
             // Páginas muy alargadas: se limita el alto para no agotar la memoria.
             val bitmapHeight = (bounds.height() * scale).roundToInt().coerceIn(1, MAX_SCREENS * height)
@@ -54,6 +51,51 @@ internal class PdfDocument private constructor(
             page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             bitmap
         }
+    }
+
+    /**
+     * Pinta solo un trozo del tamaño de la pantalla de la página ampliada
+     * [zoom] veces sobre el ajuste de [fit]: así no hace falta una imagen
+     * enorme. [left] y [top] son la esquina del trozo en píxeles de la página
+     * ampliada; se ajustan para no salirse de ella.
+     */
+    fun renderZoomed(
+        index: Int,
+        width: Int,
+        height: Int,
+        fit: PdfFit,
+        crop: Boolean,
+        zoom: Float,
+        left: Int,
+        top: Int,
+    ): ZoomedTile = synchronized(renderer) {
+        check(!closed) { "PDF cerrado" }
+        renderer.openPage(index).use { page ->
+            val bounds = bounds(page, index, crop)
+            val scale = fitScale(bounds, width, height, fit) * zoom
+            val pageWidth = (bounds.width() * scale).roundToInt().coerceAtLeast(1)
+            val pageHeight = (bounds.height() * scale).roundToInt().coerceAtLeast(1)
+            val x = left.coerceIn(0, max(0, pageWidth - width))
+            val y = top.coerceIn(0, max(0, pageHeight - height))
+            val bitmap = createBitmap(min(width, pageWidth - x), min(height, pageHeight - y))
+            bitmap.eraseColor(Color.WHITE)
+            val matrix = Matrix().apply {
+                postTranslate(-bounds.left, -bounds.top)
+                postScale(scale, scale)
+                postTranslate(-x.toFloat(), -y.toFloat())
+            }
+            page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            ZoomedTile(bitmap, x, y, pageWidth, pageHeight)
+        }
+    }
+
+    private fun bounds(page: PdfRenderer.Page, index: Int, crop: Boolean): RectF =
+        if (crop) contentBounds[index] ?: findContent(page).also { contentBounds[index] = it }
+        else RectF(0f, 0f, page.width.toFloat(), page.height.toFloat())
+
+    private fun fitScale(bounds: RectF, width: Int, height: Int, fit: PdfFit): Float = when (fit) {
+        PdfFit.Width -> width / bounds.width()
+        PdfFit.Page -> min(width / bounds.width(), height / bounds.height())
     }
 
     /**
@@ -125,3 +167,6 @@ internal class PdfDocument private constructor(
         }
     }
 }
+
+/** Trozo pintado de una página ampliada: su esquina y el tamaño de la página entera, en píxeles. */
+internal class ZoomedTile(val bitmap: Bitmap, val x: Int, val y: Int, val pageWidth: Int, val pageHeight: Int)

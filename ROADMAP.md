@@ -163,7 +163,7 @@ Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 ### Lector PDF (RF-07)
 - [x] Integrar un lector PDF. *Hecho con `PdfRenderer` de Android (PDFium) en vez del navegador PDF de Readium: este se apoya en AndroidPdfViewer, que desplaza con inercia y animaciones difíciles de quitar en E Ink. Cada página se pinta como imagen; paso de pantalla por toque en los bordes, deslizamiento o teclas, sin animación. Probado en el BOOX.*
 - [x] Ajuste al ancho por defecto con desplazamiento vertical; opción de página completa. *Hecho: al ancho se avanza por trozos de pantalla (repitiendo un 5 %) y se pasa a la página siguiente; página completa como opción. Además, recorte de márgenes en blanco. Probado en el BOOX.*
-- [ ] Zoom con gestos.
+- [x] Zoom con gestos (PDF). Pellizcar amplía o reduce al soltar, en pasos de medio aumento hasta 4×; dos toques en el centro amplían al doble donde se toca o vuelven a la página entera. Con zoom solo se pinta el trozo que se ve; arrastrar mueve la página y los bordes y teclas la recorren en orden de lectura (derecha, fila de abajo, página siguiente). El aumento se ve en el menú. *Sin probar en el BOOX.*
 - [x] Número de página, progreso y última página recordada. *Hecho: menú arriba con página y porcentaje, «Ir a página» y posición guardada en `reading_progress`. Probado en el BOOX.*
 - [ ] Renderizado fuera del hilo principal; probar con PDF técnicos pesados reales. *Se pinta en segundo plano y se deja lista la página siguiente; falta probar con PDF pesados.*
 
