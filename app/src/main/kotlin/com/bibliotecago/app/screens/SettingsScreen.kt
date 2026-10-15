@@ -1,6 +1,8 @@
 package com.bibliotecago.app.screens
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,12 +12,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bibliotecago.app.appContainer
 import com.bibliotecago.core.eink.EinkButton
 import com.bibliotecago.core.eink.EinkDialog
 import com.bibliotecago.core.eink.EinkDivider
@@ -25,16 +29,13 @@ import com.bibliotecago.core.eink.EinkTextField
 import com.bibliotecago.core.eink.EinkTheme
 import com.bibliotecago.core.eink.EinkTopBar
 import com.bibliotecago.core.eink.einkVerticalScroll
+import com.bibliotecago.server.EndpointReport
 
-/** Solo maqueta: la configuración real (cifrado, prueba de conexión) es la Fase 2. */
 @Composable
 fun SettingsScreen() {
-    var tunnelUrl by rememberSaveable { mutableStateOf("") }
-    var localUrl by rememberSaveable { mutableStateOf("") }
-    var user by rememberSaveable { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    val container = LocalContext.current.appContainer
+    val vm = viewModel { SettingsViewModel(container) }
     var listByDefault by rememberSaveable { mutableStateOf(false) }
-    var showTest by rememberSaveable { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize()) {
         EinkTopBar(title = "Ajustes")
@@ -46,20 +47,40 @@ fun SettingsScreen() {
         ) {
             EinkText("Servidor", style = EinkTheme.typography.heading)
             Spacer(Modifier.height(12.dp))
-            EinkTextField(tunnelUrl, { tunnelUrl = it }, "URL del túnel", placeholder = "https://libros.midominio.com", keyboardType = KeyboardType.Uri)
-            Spacer(Modifier.height(12.dp))
             EinkTextField(
-                localUrl, { localUrl = it }, "URL local (opcional)",
-                placeholder = "http://192.168.1.10:8083",
+                vm.tunnelUrl, { vm.tunnelUrl = it }, "URL del túnel",
+                placeholder = "https://libros.midominio.com",
                 keyboardType = KeyboardType.Uri,
-                supportingText = "Solo se admite HTTP hacia direcciones de red privada.",
+                supportingText = vm.tunnelError?.let { "Error: $it" },
             )
             Spacer(Modifier.height(12.dp))
-            EinkTextField(user, { user = it }, "Usuario")
+            EinkTextField(
+                vm.localUrl, { vm.localUrl = it }, "URL local (opcional)",
+                placeholder = "http://192.168.1.10:8083",
+                keyboardType = KeyboardType.Uri,
+                supportingText = vm.localError?.let { "Error: $it" }
+                    ?: "Se usa cuando responde; si no, el túnel. HTTP solo hacia direcciones de red privada.",
+            )
             Spacer(Modifier.height(12.dp))
-            EinkTextField(password, { password = it }, "Contraseña", password = true)
+            EinkTextField(
+                vm.username, { vm.username = it }, "Usuario",
+                supportingText = vm.credentialsError?.let { "Error: $it" },
+            )
+            Spacer(Modifier.height(12.dp))
+            EinkTextField(
+                vm.password, { vm.password = it }, "Contraseña", password = true,
+                supportingText = "Se guarda cifrada en el dispositivo.",
+            )
             Spacer(Modifier.height(16.dp))
-            EinkButton("Probar conexión", onClick = { showTest = true }, modifier = Modifier.fillMaxWidth(), primary = true)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                EinkButton(
+                    if (vm.testing) "Probando…" else "Probar conexión",
+                    onClick = vm::test,
+                    modifier = Modifier.weight(1f),
+                    enabled = !vm.testing,
+                )
+                EinkButton("Guardar", onClick = vm::save, modifier = Modifier.weight(1f), primary = true)
+            }
 
             Spacer(Modifier.height(24.dp))
             EinkDivider()
@@ -74,14 +95,37 @@ fun SettingsScreen() {
         }
     }
 
-    if (showTest) {
+    vm.reports?.let { reports ->
+        // Fuera de casa la URL local no responde: basta con que una de las dos funcione.
+        val ok = reports.any { it.problem == null }
         EinkDialog(
-            onDismissRequest = { showTest = false },
-            title = "Aún no disponible",
-            text = "La conexión con Calibre-Web llega en la Fase 2.",
+            onDismissRequest = vm::dismissReports,
+            title = when {
+                reports.all { it.problem == null } -> "Conexión correcta"
+                ok -> "Conexión parcial"
+                else -> "No se pudo conectar"
+            },
+            text = reports.joinToString("\n\n", transform = ::describe),
+            confirmLabel = if (ok) "Guardar" else "Entendido",
+            onConfirm = { if (ok) vm.save(); vm.dismissReports() },
+            dismissLabel = if (ok) "Cerrar" else null,
+        )
+    }
+
+    if (vm.savedNotice) {
+        EinkDialog(
+            onDismissRequest = vm::dismissSavedNotice,
+            title = "Ajustes guardados",
+            text = "La biblioteca usará este servidor.",
             confirmLabel = "Entendido",
-            onConfirm = { showTest = false },
+            onConfirm = vm::dismissSavedNotice,
             dismissLabel = null,
         )
     }
+}
+
+private fun describe(report: EndpointReport): String {
+    val which = if (report.isLocal) "URL local" else "Túnel"
+    val problem = report.problem ?: return "$which: catálogo accesible."
+    return "$which: ${problem.title}. ${problem.hint}"
 }

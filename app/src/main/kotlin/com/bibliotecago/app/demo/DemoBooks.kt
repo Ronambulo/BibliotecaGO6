@@ -1,6 +1,7 @@
 package com.bibliotecago.app.demo
 
 import com.bibliotecago.core.model.Book
+import com.bibliotecago.core.model.BookFile
 import com.bibliotecago.core.model.BookFormat
 import com.bibliotecago.core.model.BookId
 import com.bibliotecago.core.model.Series
@@ -31,7 +32,7 @@ object DemoBooks {
             authors = author.split(", "),
             series = if (i % 5 == 0) Series("Serie de ejemplo", (i / 5 + 1).toDouble()) else null,
             summary = "Sinopsis de ejemplo para comprobar la legibilidad del texto en tinta electrónica.",
-            formats = if (i % 3 == 0) listOf(BookFormat.PDF) else listOf(BookFormat.EPUB),
+            files = listOf(BookFile(if (i % 3 == 0) BookFormat.PDF else BookFormat.EPUB, "/demo/$i", null)),
         )
     }
 }

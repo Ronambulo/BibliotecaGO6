@@ -59,7 +59,9 @@ fun BibliotecaApp() {
                 composable(TopDestination.Home.route) {
                     HomeScreen(onOpenLibrary = { navController.navigateTop(TopDestination.Library) })
                 }
-                composable(TopDestination.Library.route) { LibraryScreen() }
+                composable(TopDestination.Library.route) {
+                    LibraryScreen(onOpenSettings = { navController.navigateTop(TopDestination.Settings) })
+                }
                 composable(TopDestination.Downloads.route) {
                     DownloadsScreen(onOpenLibrary = { navController.navigateTop(TopDestination.Library) })
                 }

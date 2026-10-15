@@ -38,7 +38,7 @@ Objetivo: eliminar incertidumbre antes de escribir la app.
 - [x] Montar el volumen de la biblioteca **con escritura** (sin `:ro`): `/media/RAID_1/Media/Books:/books`, propiedad de `PUID 1000`.
 - [x] Activar la subida de archivos con EPUB y PDF permitidos (vaciar la ruta de Kepubify en *Binarios externos* para poder guardar).
 - [x] (Opcional) Añadir el mod `universal-calibre` de LinuxServer. Se reinstala en cada recreación del contenedor: la web tarda unos minutos en responder.
-- [ ] Publicar Calibre-Web en un hostname propio del túnel de Cloudflare.
+- [x] Publicar Calibre-Web en un hostname propio del túnel de Cloudflare. `/opds` responde `401` con `WWW-Authenticate: Basic` a través del túnel, sin desafío de Cloudflare delante.
 - [x] Crear el **usuario de lectura** para la app (sin admin, subida ni edición). Solo *Permitir descargas*; las casillas «Mostrar…» se dejan activas porque también filtran las secciones del feed OPDS.
 - [ ] Contraseñas fuertes, registro público desactivado, limitador de login activado.
 - [ ] Regla de Cloudflare: **no cachear** `/opds` ni las descargas.
@@ -46,12 +46,12 @@ Objetivo: eliminar incertidumbre antes de escribir la app.
 - [ ] Configurar copia de seguridad periódica de la biblioteca y de `config/`.
 
 ### Integración OPDS (apartado 9.3)
-- [ ] Confirmar la URL OPDS exacta (`/opds`) y guardar respuestas de ejemplo como fixtures. Raíz confirmada en LAN y guardada en `catalog/src/test/resources/opds/root.xml`: enlaces **relativos**, búsqueda en `/opds/search/{searchTerms}` (ruta, no query) y títulos traducidos al idioma del usuario (la app debe guiarse por `href`, no por el título). Feeds de adquisición guardados en `new.xml` (EPUB + PDF) y `search.xml`.
-- [ ] Verificar autenticación básica con el usuario de lectura (`curl -u`).
+- [x] Confirmar la URL OPDS exacta (`/opds`) y guardar respuestas de ejemplo como fixtures. Raíz confirmada en LAN y guardada en `catalog/src/test/resources/opds/root.xml`: enlaces **relativos**, búsqueda en `/opds/search/{searchTerms}` (ruta, no query) y títulos traducidos al idioma del usuario (la app debe guiarse por `href`, no por el título). Feeds de adquisición guardados en `new.xml` (EPUB + PDF) y `search.xml`.
+- [x] Verificar autenticación básica con el usuario de lectura (`curl -u`).
 - [x] Documentar cómo se obtienen portadas y enlaces de descarga. Portada y miniatura comparten `/opds/cover/{id}` (`image/jpeg`); cada formato es un enlace `http://opds-spec.org/acquisition` a `/opds/download/{id}/{formato}/` con `type`, `length` (bytes) y `mtime`. El `id` numérico de Calibre solo aparece en esos enlaces; el `<id>` de la entrada es el `urn:uuid` del libro. Sin sinopsis, `<content>` llega como un `div` vacío, y una fecha de publicación sin rellenar llega como `101-01-01T00:00:00+00:00`: el parser debe tolerarla.
 - [x] Documentar los formatos que aparecen por libro: un enlace de adquisición por formato, con `title` (`EPUB`, `PDF`) y `type` (`application/epub+zip`, `application/pdf`). Otros metadatos del libro: un `<author>` por autor, idioma en `dcterms:language` (ISO 639-3), etiquetas como `<category term label>`, y en `<content>` unas líneas `RATING:` / `TAGS:` seguidas de la sinopsis en un `<p>` con el HTML **escapado** (hay que desescaparlo y quitarle las etiquetas).
 - [x] Probar búsqueda OPDS y paginación (`next`, tamaño de página). Búsqueda: `/opds/search/{texto}` devuelve un feed de adquisición con el mismo formato de entrada. Paginación: enlace `rel="next"` a `?offset=N` (N = número de entradas ya servidas) mientras quedan resultados; el tamaño de página es «Libros por página» (60). El enlace `self` no incluye el `offset`. Fixture: `new-page1.xml`.
-- [ ] Comprobar que la URL del túnel y la local devuelven enlaces equivalentes (rutas relativas o URL base correcta).
+- [x] Comprobar que la URL del túnel y la local devuelven enlaces equivalentes (rutas relativas o URL base correcta). Calibre-Web genera rutas relativas (`/opds/...`) y el feed se ve igual desde el móvil por el túnel con datos móviles.
 
 ### Motores de lectura
 - [ ] App de prueba mínima con Readium Kotlin Toolkit abriendo un EPUB real en el BOOX.
@@ -103,25 +103,25 @@ Objetivo: interfaz navegable con datos ficticios, validada en E Ink. Cubre la ba
 Objetivo: conectar con la biblioteca real. Cubre RF-01 a RF-05 y RF-09.
 
 ### Servidor y credenciales (RF-01)
-- [ ] Pantalla de configuración: URL del túnel, URL local opcional, usuario y contraseña.
-- [ ] Validación: HTTPS obligatorio en URL públicas; HTTP solo hacia rangos privados (10/8, 172.16/12, 192.168/16).
-- [ ] `network_security_config` coherente con esa regla.
-- [ ] Credenciales cifradas con Android Keystore.
-- [ ] **Probar conexión** con errores comprensibles (DNS, TLS, 401, timeout…).
-- [ ] Conmutación automática: usar la URL local si responde, si no la del túnel.
-- [ ] Editar y eliminar la configuración.
+- [x] Pantalla de configuración: URL del túnel, URL local opcional, usuario y contraseña.
+- [x] Validación: HTTPS obligatorio en URL públicas; HTTP solo hacia rangos privados (10/8, 172.16/12, 192.168/16).
+- [x] `network_security_config` coherente con esa regla. Los rangos no se pueden declarar ahí (solo admite nombres): HTTP queda permitido en plataforma y la regla la aplican `ServerUrls.check` al guardar y el interceptor de red `CleartextGuard` en cada petición, redirecciones incluidas. Solo CA del sistema.
+- [x] Credenciales cifradas con Android Keystore (AES-256-GCM; usuario y contraseña).
+- [x] **Probar conexión** con errores comprensibles (DNS, TLS, 401, timeout…). Informa por URL y detecta respuestas 200 que no son OPDS (portal de login, desafío de Cloudflare).
+- [x] Conmutación automática: usar la URL local si responde (3 s de conexión), si no la del túnel. La elección se recuerda 5 min y se olvida al cambiar de red.
+- [ ] Editar y eliminar la configuración. Editar, hecho; falta el botón de eliminar.
 
 ### Cliente OPDS (RF-02, RF-03)
-- [ ] Cliente HTTP con autenticación básica e interceptor que **nunca** registre credenciales.
-- [ ] Parser OPDS (Atom) para entradas, enlaces de navegación, portadas y adquisiciones.
-- [ ] Pruebas unitarias del parser con los fixtures de la Fase 0.
-- [ ] `PagingSource` de Paging 3 sobre las páginas OPDS, con precarga de la página siguiente.
+- [x] Cliente HTTP con autenticación básica e interceptor que **nunca** registre credenciales. Las credenciales solo se envían a las URL configuradas.
+- [x] Parser OPDS (Atom) para entradas, enlaces de navegación, portadas y adquisiciones.
+- [x] Pruebas unitarias del parser con los fixtures de la Fase 0.
+- [x] ~~`PagingSource` de Paging 3~~ Carga por cursor `rel="next"` con precarga una página antes del final. Paging 3 está pensado para listas perezosas; la cuadrícula E Ink trabaja con páginas fijas y OPDS no da el total.
 - [ ] Búsqueda por título y autor; navegación por autor, serie y etiquetas.
 - [ ] Orden por título, autor y fecha cuando el servidor lo ofrezca.
 - [ ] Mensaje claro sin resultados; filtros conservados al volver atrás.
 
 ### Portadas
-- [ ] Coil con autenticación, decodificado al tamaño exacto de la celda.
+- [x] Coil con autenticación, decodificado al tamaño exacto de la celda. Clave de caché por ruta: la misma portada vale por la red local y por el túnel.
 - [ ] Caché en memoria y disco; tamaño visible en Ajustes con opción de vaciar.
 
 ### Descargas (RF-04, RF-05)

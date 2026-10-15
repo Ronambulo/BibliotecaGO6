@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Apartado 10.3. Las direcciones de red privada (10/8, 172.16/12, 192.168/16) no se
+  pueden expresar aquí: domain-config solo acepta nombres, no rangos. Por eso HTTP queda
+  permitido a nivel de plataforma y la regla se aplica en la app en dos capas:
+  ServerUrls.check() rechaza al guardar cualquier http:// que no sea IP privada, y el
+  interceptor de red CleartextGuard corta en tiempo de ejecución (también en redirecciones)
+  cualquier petición en claro hacia otra dirección.
+  Solo se confía en las CA del sistema, nunca en las instaladas por el usuario.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

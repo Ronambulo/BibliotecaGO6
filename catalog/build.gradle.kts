@@ -17,7 +17,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:model"))
+    api(project(":core:model"))
+    api(project(":server"))
 
     testImplementation(libs.junit)
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -70,6 +71,10 @@ fun Modifier.einkSwipePaging(onNext: () -> Unit, onPrevious: () -> Unit): Modifi
  * Cuadrícula paginada (RF-02, §11.2): [columns] × [rows] elementos por página,
  * sin desplazamiento continuo. Con `columns = 1` sirve como lista paginada.
  * Las celdas vacías de la última página se reservan para que nada salte.
+ *
+ * Con [hasMore] la lista está incompleta (catálogo paginado en el servidor):
+ * al acercarse al final se pide [onLoadMore] con una página de antelación,
+ * para que el paso siguiente ya tenga datos.
  */
 @Composable
 fun <T> EinkPagedGrid(
@@ -79,6 +84,8 @@ fun <T> EinkPagedGrid(
     state: EinkPageState,
     modifier: Modifier = Modifier,
     key: ((T) -> Any)? = null,
+    hasMore: Boolean = false,
+    onLoadMore: () -> Unit = {},
     itemContent: @Composable (T) -> Unit,
 ) {
     val perPage = columns * rows
@@ -88,6 +95,10 @@ fun <T> EinkPagedGrid(
     val pageItems = items.drop(page * perPage).take(perPage)
 
     val currentPageCount by rememberUpdatedState(pageCount)
+    val currentOnLoadMore by rememberUpdatedState(onLoadMore)
+    LaunchedEffect(page, pageCount, hasMore) {
+        if (hasMore && page >= pageCount - 2) currentOnLoadMore()
+    }
     Column(modifier) {
         Column(
             Modifier
@@ -121,17 +132,19 @@ fun <T> EinkPagedGrid(
         EinkPageIndicator(
             page = page,
             pageCount = pageCount,
+            hasMore = hasMore,
             onPrevious = { state.page = page - 1 },
             onNext = { state.page = page + 1 },
         )
     }
 }
 
-/** Indicador «3 / 41» con botones grandes de anterior y siguiente. */
+/** Indicador «3 / 41» (o «3 / 7+» si quedan por cargar) con botones grandes de anterior y siguiente. */
 @Composable
 fun EinkPageIndicator(
     page: Int,
     pageCount: Int,
+    hasMore: Boolean = false,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
@@ -144,7 +157,7 @@ fun EinkPageIndicator(
         ) {
             EinkIconButton(EinkIcons.ChevronLeft, "Página anterior", onPrevious, enabled = page > 0)
             EinkText(
-                "${page + 1} / $pageCount",
+                "${page + 1} / $pageCount${if (hasMore) "+" else ""}",
                 Modifier.weight(1f),
                 style = EinkTheme.typography.label,
                 textAlign = TextAlign.Center,
