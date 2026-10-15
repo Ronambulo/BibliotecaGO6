@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bibliotecago.app.appContainer
+import com.bibliotecago.catalog.CatalogRepository
 import com.bibliotecago.core.eink.EinkButton
 import com.bibliotecago.core.eink.EinkDialog
 import com.bibliotecago.core.eink.EinkDivider
@@ -45,7 +46,7 @@ import com.bibliotecago.downloads.DownloadState
 import java.io.File
 
 @Composable
-fun BookDetailScreen(bookId: BookId, onBack: () -> Unit) {
+fun BookDetailScreen(bookId: BookId, onBack: () -> Unit, onOpenFeed: (href: String, title: String) -> Unit) {
     val container = LocalContext.current.appContainer
     val vm = viewModel(key = bookId.value) { BookDetailViewModel(container, bookId) }
     var confirmRemove by rememberSaveable { mutableStateOf<BookFormat?>(null) }
@@ -63,6 +64,7 @@ fun BookDetailScreen(bookId: BookId, onBack: () -> Unit) {
                     .padding(EinkTheme.dimens.gutter)
             ) {
                 Header(book, vm)
+                Related(book, onOpenFeed)
                 Spacer(Modifier.height(16.dp))
                 EinkText("Formatos", style = EinkTheme.typography.heading)
                 Spacer(Modifier.height(8.dp))
@@ -142,6 +144,26 @@ private fun Header(book: Book, vm: BookDetailViewModel) {
                 Spacer(Modifier.height(8.dp))
                 EinkText(ratingStars(it), style = EinkTheme.typography.label)
             }
+        }
+    }
+}
+
+/**
+ * «Más de…»: las entradas OPDS no enlazan al autor ni a la serie, así que se
+ * busca su nombre (la búsqueda de Calibre-Web incluye autores y series).
+ */
+@Composable
+private fun Related(book: Book, onOpenFeed: (String, String) -> Unit) {
+    val author = book.authors.firstOrNull()
+    val series = book.series?.name
+    if (author == null && series == null) return
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (author != null) {
+            EinkButton("Más del autor", { onOpenFeed(CatalogRepository.searchHref(author), author) }, Modifier.weight(1f))
+        }
+        if (series != null) {
+            EinkButton("Ver la serie", { onOpenFeed(CatalogRepository.searchHref(series), series) }, Modifier.weight(1f))
         }
     }
 }

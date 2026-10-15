@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/terms/" xmlns:dcterms="http://purl.org/dc/terms/">
+  <icon>/static/favicon.ico</icon>
+  <id>urn:uuid:2853dacf-ed79-42f5-8e8a-a7bb3d1ae6a2</id>
+  <updated>2026-10-15T18:08:42+00:00</updated>
+  <link rel="self"
+        href="/opds/search/h?"
+        type="application/atom+xml;profile=opds-catalog;type=feed;kind=navigation"/>
+  <link rel="start"
+        href="/opds"
+        type="application/atom+xml;profile=opds-catalog;type=feed;kind=navigation"/>
+  <link rel="up"
+        href="/opds"
+        type="application/atom+xml;profile=opds-catalog;type=feed;kind=navigation"/>
+
+
+
+    <link rel="search"
+      href="/opds/osd"
+      type="application/opensearchdescription+xml"/>
+  <link type="application/atom+xml" rel="search" title="Buscar" href="/opds/search/{searchTerms}" />
+  <title>Calibre-Web</title>
+  <author>
+    <name>Calibre-Web</name>
+    <uri>https://github.com/crocodilestick/calibre-web-automated</uri>
+  </author>
+
+
+
+  <entry>
+    <title>Harry Potter and the Sorcerer&#39;s Stone</title>
+    <id>urn:uuid:de884aab-b034-46d9-b486-2471a759515a</id>
+    <updated>2026-10-15T16:41:50+00:00</updated>
+
+      <author>
+        <name>J.K. Rowling</name>
+      </author>
+
+
+      <publisher>
+        <name>Pottermore Publishing</name>
+      </publisher>
+
+    <published>2015-12-08T00:00:00+00:00</published>
+
+      <dcterms:language>eng</dcterms:language>
+
+      <dcterms:language>spa</dcterms:language>
+
+
+    <category scheme="http://www.bisg.org/standards/bisac_subject/index.html"
+              term="harry potter"
+              label="harry potter"/>
+
+
+    <summary>Turning the envelope over, his hand trembling, Harry saw a purple wax seal bearing a coat of arms; a lion, an eagle, a badger and a snake surrounding a large letter &#39;H&#39;. Harry Potter has never even heard of Hogwarts when the letters start dropping on the doormat at number four, Privet Drive. Addressed in green ink on yellowish parchment with a purple seal, they are swiftly confiscated by his grisly aunt and uncle. Then, on Harry&#39;s eleventh birthday, a great beetle-eyed giant of a man called Rubeus Hagrid bursts in with some astonishing news: Harry Potter is a wizard, and he has a place at Hogwarts School of Witchcraft and Wizardry. An incredible adventure is about to begin! Having become classics of our time, the Harry Potter eBooks never fail to bring comfort and escapism. With their message of hope, belonging and the enduring power of truth and love, the story of the Boy Who Lived continues to delight generations of new readers.</summary>
+
+    <link type="image/jpeg" href="/opds/cover/2" rel="http://opds-spec.org/image"/>
+    <link type="image/jpeg" href="/opds/cover/2" rel="http://opds-spec.org/image/thumbnail"/>
+
+
+    <link rel="http://opds-spec.org/acquisition" href="/opds/download/2/epub/"
+          length="156715033" mtime="2026-10-15T16:41:50+00:00" type="application/epub+zip"/>
+
+  </entry>
+
+
+
+
+</feed>

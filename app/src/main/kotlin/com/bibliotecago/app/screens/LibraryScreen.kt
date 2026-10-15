@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bibliotecago.app.appContainer
+import com.bibliotecago.catalog.CatalogBrowse
 import com.bibliotecago.catalog.CatalogListing
 import com.bibliotecago.core.eink.EinkButton
 import com.bibliotecago.core.eink.EinkCard
@@ -41,11 +42,16 @@ import com.bibliotecago.core.model.BookId
 import com.bibliotecago.server.ConnectionProblem
 
 @Composable
-fun LibraryScreen(onOpenSettings: () -> Unit, onOpenBook: (BookId) -> Unit) {
+fun LibraryScreen(
+    onOpenSettings: () -> Unit,
+    onOpenBook: (BookId) -> Unit,
+    onBrowse: (CatalogBrowse) -> Unit,
+) {
     val container = LocalContext.current.appContainer
     val vm = viewModel { LibraryViewModel(container) }
     var asList by rememberSaveable { mutableStateOf(false) }
     var showSort by rememberSaveable { mutableStateOf(false) }
+    var showBrowse by rememberSaveable { mutableStateOf(false) }
     var searching by rememberSaveable { mutableStateOf(false) }
     var searchText by rememberSaveable { mutableStateOf("") }
     val gridPage = rememberEinkPageState()
@@ -61,6 +67,7 @@ fun LibraryScreen(onOpenSettings: () -> Unit, onOpenBook: (BookId) -> Unit) {
                 EinkIcons.Search, contentDescription = "Buscar", selected = searching || vm.query != null,
                 onClick = { searching = true },
             )
+            EinkIconButton(EinkIcons.Folder, contentDescription = "Explorar", onClick = { showBrowse = true })
             EinkIconButton(EinkIcons.Sort, contentDescription = "Ordenar", onClick = { showSort = true })
             EinkIconButton(
                 icon = if (asList) EinkIcons.Grid else EinkIcons.List,
@@ -141,6 +148,18 @@ fun LibraryScreen(onOpenSettings: () -> Unit, onOpenBook: (BookId) -> Unit) {
         }
     }
 
+    if (showBrowse) {
+        EinkMenu(
+            onDismissRequest = { showBrowse = false },
+            title = "Explorar por",
+            options = CatalogBrowse.entries.map { it.label },
+            onSelect = {
+                showBrowse = false
+                onBrowse(CatalogBrowse.entries[it])
+            },
+        )
+    }
+
     if (showSort) {
         EinkMenu(
             onDismissRequest = { showSort = false },
@@ -160,7 +179,7 @@ fun LibraryScreen(onOpenSettings: () -> Unit, onOpenBook: (BookId) -> Unit) {
 }
 
 @Composable
-private fun MoreFailed(problem: ConnectionProblem, onRetry: () -> Unit) {
+fun MoreFailed(problem: ConnectionProblem, onRetry: () -> Unit) {
     EinkDivider()
     Row(
         Modifier.fillMaxWidth().padding(horizontal = EinkTheme.dimens.gutter, vertical = 8.dp),

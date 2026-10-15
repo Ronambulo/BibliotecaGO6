@@ -61,7 +61,8 @@ object OpdsParser {
             id = BookId(entry.childText(ATOM, "id").orEmpty()),
             title = entry.childText(ATOM, "title").orEmpty(),
             authors = entry.children(ATOM, "author").mapNotNull { it.childText(ATOM, "name")?.ifEmpty { null } },
-            summary = content?.let(::summary),
+            summary = content?.let(::summary)
+                ?: entry.childText(ATOM, "summary")?.let(HtmlText::toPlainText)?.ifEmpty { null },
             tags = entry.children(ATOM, "category").mapNotNull { category ->
                 category.getAttribute("label").ifEmpty { category.getAttribute("term") }.trim().ifEmpty { null }
             },
@@ -85,6 +86,8 @@ object OpdsParser {
     /**
      * Calibre-Web mete en `<content>` unas líneas «RATING: ★★★» y «TAGS: …» y
      * después la sinopsis dentro de un `<p>`, con su HTML escapado una vez más.
+     * Calibre-Web-Automated no manda `<content>`: la sinopsis va en `<summary>`
+     * ya sin etiquetas (y sin valoración).
      */
     private fun summary(content: Element): String? {
         val html = when (content.getAttribute("type")) {

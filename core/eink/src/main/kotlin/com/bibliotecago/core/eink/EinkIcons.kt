@@ -49,6 +49,11 @@ object EinkIcons {
         arcTo(6.5f, 6.5f, 0f, true, true, 16.5f, 10f)
         moveTo(14.8f, 14.8f); lineTo(20.5f, 20.5f)
     }
+    /** Carpeta: explorar por autor, serie o etiqueta. */
+    val Folder = icon("Folder") {
+        moveTo(3.5f, 6f); lineTo(9.5f, 6f); lineTo(11.5f, 8f); lineTo(20.5f, 8f)
+        lineTo(20.5f, 19f); lineTo(3.5f, 19f); close()
+    }
     /** Tres líneas de largo decreciente: ordenar. */
     val Sort = icon("Sort") {
         moveTo(4f, 6f); lineTo(20f, 6f)

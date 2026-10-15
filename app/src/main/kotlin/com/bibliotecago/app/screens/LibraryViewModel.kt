@@ -9,7 +9,6 @@ import com.bibliotecago.app.AppContainer
 import com.bibliotecago.catalog.CatalogListing
 import com.bibliotecago.catalog.OpdsFeed
 import com.bibliotecago.core.model.Book
-import com.bibliotecago.downloads.DownloadState
 import com.bibliotecago.server.ConnectionProblem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -58,9 +57,7 @@ class LibraryViewModel(private val app: AppContainer) : ViewModel() {
         // Al guardar otro servidor en Ajustes, se recarga desde cero.
         viewModelScope.launch { app.serverConfig.config.drop(1).collect { reload() } }
         viewModelScope.launch {
-            app.downloads.downloads.collect { list ->
-                downloaded = list.filter { it.state is DownloadState.Done }.mapTo(HashSet()) { it.book.id.value }
-            }
+            app.downloadedBookIds().collect { downloaded = it }
         }
     }
 

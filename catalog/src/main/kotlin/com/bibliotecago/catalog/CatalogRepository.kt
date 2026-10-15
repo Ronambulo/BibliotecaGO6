@@ -10,6 +10,16 @@ enum class CatalogListing(val label: String, val href: String) {
     Title("Título", "opds/books/letter/00"),
 }
 
+/**
+ * Índices de navegación de Calibre-Web. Primero dan letras, luego autores,
+ * series o etiquetas y al final los libros: se recorren siguiendo enlaces.
+ */
+enum class CatalogBrowse(val label: String, val title: String, val href: String) {
+    Authors("Autor", "Autores", "opds/author"),
+    Series("Serie", "Series", "opds/series"),
+    Tags("Etiqueta", "Etiquetas", "opds/category"),
+}
+
 /** Lee el catálogo del servidor configurado. Sin caché propia (eso es la Fase 4). */
 class CatalogRepository(private val connection: ServerConnection) {
 
@@ -21,12 +31,13 @@ class CatalogRepository(private val connection: ServerConnection) {
 
     /** Búsqueda con la plantilla del feed (`/opds/search/{searchTerms}`): el término va en la ruta. */
     suspend fun search(query: String, template: String = DEFAULT_SEARCH): OpdsFeed =
-        feed(searchHref(template, query))
+        feed(searchHref(query, template))
 
     companion object {
         const val DEFAULT_SEARCH = "opds/search/{searchTerms}"
 
-        internal fun searchHref(template: String, query: String): String {
+        /** Ruta de búsqueda para [query]; la usa también la ficha para «Más del autor». */
+        fun searchHref(query: String, template: String = DEFAULT_SEARCH): String {
             // Como segmento de ruta: espacios como %20, no como «+».
             val encoded = URLEncoder.encode(query.trim(), "UTF-8").replace("+", "%20")
             return template.replace("{searchTerms}", encoded)

@@ -35,6 +35,7 @@ Objetivo: eliminar incertidumbre antes de escribir la app.
 
 ### Servidor
 - [x] Confirmar la versión de Calibre-Web (0.6.27) en el `docker-compose.yml`. Imagen `linuxserver/calibre-web:0.6.27` sin digest: la 0.6.24 de la tienda de ZimaOS falla con bibliotecas creadas por Calibre 9 (`no such column: books.isbn`).
+- [x] Migrar a **Calibre-Web-Automated** (`crocodilestick/calibre-web-automated`) reutilizando una copia de `config/` y la misma biblioteca, en el mismo puerto 8083. Su OPDS es el de Calibre-Web salvo la ficha: la sinopsis llega en `<summary>` ya sin etiquetas (no en `<content>`) y no trae valoración. Fixture: `cwa-search.xml`.
 - [x] Montar el volumen de la biblioteca **con escritura** (sin `:ro`): `/media/RAID_1/Media/Books:/books`, propiedad de `PUID 1000`.
 - [x] Activar la subida de archivos con EPUB y PDF permitidos (vaciar la ruta de Kepubify en *Binarios externos* para poder guardar).
 - [x] (Opcional) Añadir el mod `universal-calibre` de LinuxServer. Se reinstala en cada recreación del contenedor: la web tarda unos minutos en responder.
@@ -116,7 +117,7 @@ Objetivo: conectar con la biblioteca real. Cubre RF-01 a RF-05 y RF-09.
 - [x] Parser OPDS (Atom) para entradas, enlaces de navegación, portadas y adquisiciones.
 - [x] Pruebas unitarias del parser con los fixtures de la Fase 0.
 - [x] ~~`PagingSource` de Paging 3~~ Carga por cursor `rel="next"` con precarga una página antes del final. Paging 3 está pensado para listas perezosas; la cuadrícula E Ink trabaja con páginas fijas y OPDS no da el total.
-- [ ] Búsqueda por título y autor; navegación por autor, serie y etiquetas. Búsqueda, hecha (`/opds/search`); falta la navegación.
+- [x] Búsqueda por título y autor; navegación por autor, serie y etiquetas. Una pantalla genérica recorre cualquier feed OPDS (letras → autores → libros); la ficha enlaza «Más del autor» y «Ver la serie» buscando el nombre. Probado en el BOOX con el servidor real.
 - [ ] Orden por título, autor y fecha cuando el servidor lo ofrezca.
 - [x] Mensaje claro sin resultados; búsqueda, orden y página conservados al volver de una ficha.
 

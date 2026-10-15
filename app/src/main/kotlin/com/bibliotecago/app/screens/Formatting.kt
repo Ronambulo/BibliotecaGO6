@@ -1,7 +1,10 @@
 package com.bibliotecago.app.screens
 
+import com.bibliotecago.app.AppContainer
 import com.bibliotecago.core.model.Book
 import com.bibliotecago.downloads.DownloadState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.util.Locale
 
 private val spanish = Locale.forLanguageTag("es-ES")
@@ -39,4 +42,9 @@ fun describe(state: DownloadState): String = when (state) {
         ?: "Descargando… ${formatBytes(state.downloadedBytes)}"
     is DownloadState.Done -> "En el dispositivo · ${formatBytes(state.sizeBytes)}"
     is DownloadState.Failed -> "Error: ${state.problem.title}"
+}
+
+/** Ids de los libros con algún formato ya en el dispositivo, para marcarlos en los listados. */
+fun AppContainer.downloadedBookIds(): Flow<Set<String>> = downloads.downloads.map { list ->
+    list.filter { it.state is DownloadState.Done }.mapTo(HashSet()) { it.book.id.value }
 }

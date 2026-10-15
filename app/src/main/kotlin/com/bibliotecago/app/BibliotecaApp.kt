@@ -12,6 +12,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -19,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import android.net.Uri
 import com.bibliotecago.app.screens.BookDetailScreen
 import com.bibliotecago.app.screens.DownloadsScreen
+import com.bibliotecago.app.screens.ExploreScreen
 import com.bibliotecago.app.screens.HomeScreen
 import com.bibliotecago.app.screens.LibraryScreen
 import com.bibliotecago.app.screens.SettingsScreen
@@ -66,6 +69,7 @@ fun BibliotecaApp() {
                     LibraryScreen(
                         onOpenSettings = { navController.navigateTop(TopDestination.Settings) },
                         onOpenBook = navController::navigateToBook,
+                        onBrowse = { navController.navigateToFeed(it.href, it.title) },
                     )
                 }
                 composable(TopDestination.Downloads.route) {
@@ -74,10 +78,29 @@ fun BibliotecaApp() {
                         onOpenBook = navController::navigateToBook,
                     )
                 }
+                // Navigation ya descodifica los argumentos.
                 composable(BOOK_ROUTE) { entry ->
-                    // Navigation ya descodifica el argumento.
                     val id = BookId(entry.arguments?.getString("id").orEmpty())
-                    BookDetailScreen(id, onBack = { navController.popBackStack() })
+                    BookDetailScreen(
+                        id,
+                        onBack = { navController.popBackStack() },
+                        onOpenFeed = navController::navigateToFeed,
+                    )
+                }
+                composable(
+                    FEED_ROUTE,
+                    arguments = listOf(
+                        navArgument("href") { type = NavType.StringType; defaultValue = "" },
+                        navArgument("title") { type = NavType.StringType; defaultValue = "" },
+                    ),
+                ) { entry ->
+                    ExploreScreen(
+                        href = entry.arguments?.getString("href").orEmpty(),
+                        title = entry.arguments?.getString("title").orEmpty(),
+                        onBack = { navController.popBackStack() },
+                        onOpenFeed = navController::navigateToFeed,
+                        onOpenBook = navController::navigateToBook,
+                    )
                 }
                 composable(TopDestination.Settings.route) { SettingsScreen() }
             }
@@ -95,6 +118,12 @@ fun BibliotecaApp() {
 }
 
 private const val BOOK_ROUTE = "libro/{id}"
+private const val FEED_ROUTE = "explorar?href={href}&title={title}"
+
+/** Un feed OPDS por su ruta en el servidor: índices, autores, series, búsquedas… */
+private fun NavController.navigateToFeed(href: String, title: String) {
+    navigate("explorar?href=${Uri.encode(href)}&title=${Uri.encode(title)}")
+}
 
 /** El id OPDS lleva «:» y «/» (urn:uuid:…), así que va codificado en la ruta. */
 private fun NavController.navigateToBook(id: BookId) {

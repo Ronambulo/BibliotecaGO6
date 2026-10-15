@@ -80,11 +80,22 @@ class OpdsParserTest {
         assertTrue(feed.navigation.isEmpty())
     }
 
+    @Test fun `Calibre-Web-Automated manda la sinopsis en summary`() {
+        val book = fixture("cwa-search.xml").books.single()
+
+        assertTrue(book.summary!!.startsWith("Turning the envelope over"))
+        assertTrue("a large letter 'H'." in book.summary!!)
+        assertEquals(listOf("J.K. Rowling"), book.authors)
+        assertEquals("eng", book.language)
+        assertNull(book.rating)
+        assertEquals(listOf(BookFile(BookFormat.EPUB, "/opds/download/2/epub/", 156_715_033)), book.files)
+    }
+
     @Test fun `termino de busqueda como segmento de ruta`() {
         assertEquals(
             "/opds/search/el%20nombre%20del%20viento",
-            CatalogRepository.searchHref("/opds/search/{searchTerms}", " el nombre del viento "),
+            CatalogRepository.searchHref(" el nombre del viento ", "/opds/search/{searchTerms}"),
         )
-        assertEquals("/opds/search/Garc%C3%ADa%20M%C3%A1rquez", CatalogRepository.searchHref("/opds/search/{searchTerms}", "García Márquez"))
+        assertEquals("/opds/search/Garc%C3%ADa%20M%C3%A1rquez", CatalogRepository.searchHref("García Márquez", "/opds/search/{searchTerms}"))
     }
 }
