@@ -43,6 +43,7 @@ import com.bibliotecago.core.model.BookFormat
 import com.bibliotecago.core.model.BookId
 import com.bibliotecago.downloads.Download
 import com.bibliotecago.downloads.DownloadState
+import com.bibliotecago.reader.epub.EpubReaderActivity
 import java.io.File
 
 @Composable
@@ -77,7 +78,12 @@ fun BookDetailScreen(bookId: BookId, onBack: () -> Unit, onOpenFeed: (href: Stri
                         onDownload = { vm.download(file.format) },
                         onCancel = { vm.cancel(file.format) },
                         onRemove = { confirmRemove = file.format },
-                        onRead = { done -> if (!openExternally(context, done.file, file.format)) cannotOpen = true },
+                        onRead = { done ->
+                            when (file.format) {
+                                BookFormat.EPUB -> context.startActivity(EpubReaderActivity.intent(context, done.file, book.id, book.title))
+                                BookFormat.PDF -> if (!openExternally(context, done.file, file.format)) cannotOpen = true
+                            }
+                        },
                     )
                     Spacer(Modifier.height(8.dp))
                 }
@@ -115,7 +121,7 @@ fun BookDetailScreen(bookId: BookId, onBack: () -> Unit, onOpenFeed: (href: Stri
         EinkDialog(
             onDismissRequest = { cannotOpen = false },
             title = "No se puede abrir",
-            text = "No hay ninguna app para este formato. El lector propio llega en la Fase 3.",
+            text = "No hay ninguna app para leer PDF en este dispositivo.",
             confirmLabel = "Entendido",
             onConfirm = { cannotOpen = false },
             dismissLabel = null,
@@ -236,8 +242,8 @@ private fun Details(book: Book) {
 }
 
 /**
- * Provisional hasta los lectores de la Fase 3: abre el archivo descargado en
- * otra app (en el BOOX, NeoReader) para comprobar que la descarga es válida.
+ * Provisional hasta el lector de PDF: abre el archivo descargado en otra app
+ * (en el BOOX, NeoReader).
  */
 private fun openExternally(context: Context, file: File, format: BookFormat): Boolean {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.books", file)

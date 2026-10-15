@@ -30,6 +30,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Lo exige Readium (lector EPUB).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -38,6 +40,8 @@ android {
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
+
     implementation(project(":core:eink"))
     implementation(project(":core:model"))
     implementation(project(":server"))

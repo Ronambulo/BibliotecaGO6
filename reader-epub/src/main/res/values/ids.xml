@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Id fijo: el FragmentManager lo necesita para recolocar el navegador al recrear la actividad. -->
+    <item name="epub_navigator_container" type="id" />
+</resources>

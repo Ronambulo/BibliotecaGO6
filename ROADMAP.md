@@ -132,7 +132,7 @@ Objetivo: conectar con la biblioteca real. Cubre RF-01 a RF-05 y RF-09.
 - [x] Verificación de integridad: tamaño > 0 y coincidencia con `Content-Length`.
 - [x] Quitar del dispositivo con confirmación («no se borra del servidor»).
 - [x] Pruebas del gestor de descargas (corte de red, reintento, duplicado).
-- [x] Ficha del libro (RF-04): portada, autores, serie, valoración, sinopsis, etiquetas, idioma y estado de cada formato. «Leer» abre el archivo en otra app hasta que llegue el lector (Fase 3).
+- [x] Ficha del libro (RF-04): portada, autores, serie, valoración, sinopsis, etiquetas, idioma y estado de cada formato. «Leer» abre los EPUB en el lector propio; los PDF, en otra app hasta su lector (Fase 3).
 
 ### Sin conexión (RF-09)
 - [x] Descargas y ficha funcionan con el servidor caído. Probado en modo avión en el BOOX.
@@ -148,17 +148,17 @@ Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 
 ### Base común
 - [ ] Pantalla de lector a pantalla completa, sin barra inferior.
-- [ ] Controles que aparecen al tocar el centro y se ocultan después.
-- [ ] Paso de página por toque en los laterales y por deslizamiento, **sin animación**.
-- [ ] Esquema Room para progreso (`Locator` de Readium + fecha) y marcadores, preparado para sincronizar en el futuro (ids estables, `updatedAt`).
+- [x] Controles que aparecen y se ocultan al tocar el centro, en un menú abajo (volver, título, capítulo, página y porcentaje). Probado en el BOOX.
+- [x] Paso de página por toque en los laterales y por deslizamiento, **sin animación** (el deslizamiento de Readium se intercepta y pasa página de golpe). Probado en el BOOX.
+- [ ] Esquema Room para progreso (`Locator` de Readium + fecha) y marcadores, preparado para sincronizar en el futuro (ids estables, `updatedAt`). *Progreso hecho en `:library` (`library.db`, `reading_progress`); faltan los marcadores.*
 
 ### Lector EPUB (RF-06)
-- [ ] Integrar el navegador EPUB de Readium con paginación sin animación.
-- [ ] Preferencias: tamaño de letra, fuente, márgenes, interlineado, tema claro (y oscuro si se ve bien).
-- [ ] Tabla de contenidos.
+- [x] Integrar el navegador EPUB de Readium con paginación sin animación. Probado en el BOOX.
+- [x] Preferencias: tamaño de letra, fuente, márgenes, interlineado, tema claro (y oscuro si se ve bien). Panel «Texto» en el menú, común a todos los libros. Probado en el BOOX.
+- [x] Tabla de contenidos: «Índice» paginado, abre en el capítulo actual. Probado en el BOOX.
 - [ ] Marcadores: crear, listar, saltar y eliminar.
 - [ ] Búsqueda de texto dentro del libro.
-- [ ] Barra de progreso discreta y última posición recordada.
+- [x] Barra de progreso discreta y última posición recordada: capítulo, página y porcentaje en el menú; la posición se guarda en cada cambio de página. Probado en el BOOX.
 
 ### Lector PDF (RF-07)
 - [ ] Integrar el navegador PDF de Readium (o MuPDF según la Fase 0).

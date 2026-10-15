@@ -13,6 +13,8 @@ import com.bibliotecago.core.model.Book
 import com.bibliotecago.core.model.BookId
 import com.bibliotecago.downloads.DownloadManager
 import com.bibliotecago.downloads.DownloadsHost
+import com.bibliotecago.library.LibraryHost
+import com.bibliotecago.library.ReadingProgressStore
 import com.bibliotecago.server.ServerConfigStore
 import com.bibliotecago.server.ServerConnection
 import kotlinx.coroutines.CoroutineScope
@@ -22,7 +24,7 @@ import kotlinx.coroutines.launch
 import okhttp3.HttpUrl
 import java.util.concurrent.ConcurrentHashMap
 
-class BibliotecaApplication : Application(), SingletonImageLoader.Factory, DownloadsHost {
+class BibliotecaApplication : Application(), SingletonImageLoader.Factory, DownloadsHost, LibraryHost {
 
     /**
      * Perezoso: WorkManager se inicia antes que [onCreate] y podría lanzar una
@@ -31,6 +33,7 @@ class BibliotecaApplication : Application(), SingletonImageLoader.Factory, Downl
     val container: AppContainer by lazy { AppContainer(this) }
 
     override val downloadManager: DownloadManager get() = container.downloads
+    override val readingProgress: ReadingProgressStore get() = container.readingProgress
 
     override fun onCreate() {
         super.onCreate()
@@ -51,6 +54,7 @@ class AppContainer(private val context: Context) {
     val catalog = CatalogRepository(connection)
     val downloads = DownloadManager(context, connection)
     val books = BookCache()
+    val readingProgress = ReadingProgressStore(context)
 
     /**
      * Base para las portadas: la URL en uso o, sin conexión, la primera

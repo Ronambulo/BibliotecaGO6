@@ -19,6 +19,9 @@ coil = "3.3.0"
 room = "2.8.5"
 ksp = "2.3.12"
 work = "2.12.0"
+readium = "3.4.0"
+desugar-jdk-libs = "2.1.5"
+androidx-fragment = "1.9.1"
 
 junit = "4.13.2"
 
@@ -51,6 +54,14 @@ room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+
+# Lector EPUB (Fase 3). El navegador de Readium es un Fragment: se aloja en una FragmentActivity.
+readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version.ref = "readium" }
+readium-streamer = { module = "org.readium.kotlin-toolkit:readium-streamer", version.ref = "readium" }
+readium-navigator = { module = "org.readium.kotlin-toolkit:readium-navigator", version.ref = "readium" }
+androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "androidx-fragment" }
+# Readium usa APIs de java.time y java.util que el AAR pide desazucarar en la app.
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar-jdk-libs" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
 
