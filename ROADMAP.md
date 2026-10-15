@@ -82,12 +82,13 @@ Objetivo: interfaz navegable con datos ficticios, validada en E Ink. Cubre la ba
 - [x] Regla de revisión (lint o checklist) que prohíba `animate*`, `AnimatedVisibility`, `Crossfade` y `animateContentSize`.
 
 ### Pantallas con datos ficticios
-- [ ] Inicio: continuar leyendo, recientes, estado del servidor, acceso a búsqueda.
-- [ ] Biblioteca: cuadrícula paginada, vista lista, búsqueda, filtros, indicador de descargado.
-- [ ] Ficha del libro: portada, metadatos, sinopsis, formatos, botón Leer/Descargar, quitar copia local.
-- [ ] Descargas: lista local, espacio ocupado, quitar copia.
-- [ ] Ajustes: servidor, lectura, almacenamiento, versión y licencias.
-- [ ] Estados vacíos y de error en todas las pantallas.
+*Hechas directamente con datos reales del servidor.*
+- [ ] Inicio: continuar leyendo, recientes, estado del servidor, acceso a búsqueda. *(continuar leyendo y búsqueda hechos; faltan recientes y estado del servidor)*
+- [x] Biblioteca: cuadrícula paginada, vista lista, búsqueda, filtros, indicador de descargado. *(órdenes en lugar de filtros; también insignia de leído)*
+- [x] Ficha del libro: portada, metadatos, sinopsis, formatos, botón Leer/Descargar, quitar copia local.
+- [x] Descargas: lista local, espacio ocupado, quitar copia.
+- [ ] Ajustes: servidor, lectura, almacenamiento, versión y licencias. *(falta la sección de lectura)*
+- [x] Estados vacíos y de error en todas las pantallas.
 
 ### Validación en el dispositivo
 - [ ] Instalar el APK de depuración en el BOOX.
