@@ -8,6 +8,7 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import com.bibliotecago.catalog.CatalogListing
 import com.bibliotecago.catalog.CatalogRepository
 import com.bibliotecago.core.model.Book
 import com.bibliotecago.core.model.BookId
@@ -18,9 +19,12 @@ import com.bibliotecago.library.LibraryStore
 import com.bibliotecago.server.ServerConfigStore
 import com.bibliotecago.server.ReadStatusClient
 import com.bibliotecago.server.ServerConnection
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl
 import java.util.concurrent.ConcurrentHashMap
@@ -68,6 +72,28 @@ class AppContainer(val context: Context) {
      * portadas ya vistas salen aunque el servidor no responda.
      */
     val coverBase: HttpUrl? get() = connection.activeBase ?: serverConfig.config.value?.endpoints?.firstOrNull()
+
+    private val _recentBooks = MutableSharedFlow<List<Book>>(extraBufferCapacity = 1)
+    /** Primera página de «Añadidos recientemente» de cada consulta periódica. */
+    val recentBooks: SharedFlow<List<Book>> = _recentBooks
+
+    /**
+     * Consulta periódica con la app en pantalla: envía y trae los leídos, y
+     * mira si hay libros nuevos. Sin red no pasa nada: se prueba en la siguiente.
+     */
+    suspend fun poll() {
+        readSync.retry()
+        if (serverConfig.config.value == null) return
+        val books = try {
+            catalog.listing(CatalogListing.Recent).books
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return
+        }
+        this.books.putAll(books)
+        _recentBooks.emit(books)
+    }
 
     /** Para trabajos que no pertenecen a ninguna pantalla. */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

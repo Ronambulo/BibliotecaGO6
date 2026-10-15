@@ -21,7 +21,7 @@ import java.io.IOException
  *
  * - App → Calibre: en cuanto cambia algo, se envía; lo que no se puede enviar
  *   queda pendiente en Room para el siguiente intento.
- * - Calibre → app: al arrancar, al volver a primer plano y al volver la red se
+ * - Calibre → app: al volver a la app, cada 5 minutos en pantalla y al volver la red se
  *   leen los leídos del servidor (`/opds/readbooks`). Antes se envía lo
  *   pendiente, y lo pendiente nunca se pisa: gana el último cambio hecho aquí.
  */

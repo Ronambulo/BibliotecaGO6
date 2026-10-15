@@ -32,7 +32,8 @@ La app **no sube ni modifica nada** en el servidor: consulta el catálogo por OP
 - **Lector EPUB** con tipografía, márgenes, tabla de contenidos, marcadores y búsqueda de texto.
 - **Lector PDF** con ajuste al ancho, página completa y zoom.
 - **Continuar leyendo**: posición y progreso guardados localmente.
-- **Marcar y desmarcar como leído** desde el lector o la ficha, sincronizado en los dos sentidos con Calibre-Web: lo marcado en la app se envía al momento (o, sin conexión, en cuanto vuelve la red), y lo marcado en la web llega a la app al abrirla, al volver a ella y al volver la red.
+- **Marcar y desmarcar como leído** desde el lector o la ficha, sincronizado en los dos sentidos con Calibre-Web: lo marcado en la app se envía al momento (o, sin conexión, en cuanto vuelve la red), y lo marcado en la web llega a la app al abrirla, al volver a ella, al volver la red y cada 5 minutos mientras está en pantalla.
+- **Libros nuevos** sin recargar: con la app en pantalla, cada 5 minutos se mira «Añadidos recientemente» y lo nuevo aparece al principio de ese listado. Calibre-Web no avisa de cambios, así que se le pregunta; en segundo plano no se consulta nada.
 - **Modo sin conexión** para todos los libros descargados.
 - **Acceso remoto** a través de Cloudflare Tunnel (HTTPS) y URL local opcional en casa.
 

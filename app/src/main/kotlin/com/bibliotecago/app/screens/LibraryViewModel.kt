@@ -72,6 +72,17 @@ class LibraryViewModel(private val app: AppContainer) : ViewModel() {
             app.downloadedBookIds().collect { downloaded = it }
         }
         viewModelScope.launch { app.finishedBookIds().collect { finished = it } }
+        // Libros nuevos de la consulta periódica: suben al principio de «Añadidos
+        // recientemente» sin recargar, para no mover lo que se está mirando.
+        viewModelScope.launch {
+            app.recentBooks.collect { fresh ->
+                val current = state as? LibraryState.Content ?: return@collect
+                if (listing != CatalogListing.Recent || lastOpened || query != null) return@collect
+                val known = current.books.mapTo(HashSet()) { it.id }
+                val added = fresh.filter { it.id !in known }
+                if (added.isNotEmpty()) state = current.copy(books = added + current.books)
+            }
+        }
         // Al volver del lector, el libro abierto sube al principio sin recargar.
         viewModelScope.launch {
             openedIds().drop(1).collect { ids ->
