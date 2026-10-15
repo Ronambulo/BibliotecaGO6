@@ -3,11 +3,19 @@ package com.bibliotecago.catalog
 import com.bibliotecago.server.ServerConnection
 import java.net.URLEncoder
 
-/** Listados planos de libros que ofrece Calibre-Web, ya ordenados por el servidor. */
+/**
+ * Listados planos de libros que ofrece Calibre-Web, ya ordenados por el
+ * servidor. OPDS no admite un parámetro de orden: cada orden es un feed. Por
+ * autor no hay lista plana; se llega por Explorar → Autores.
+ */
 enum class CatalogListing(val label: String, val href: String) {
     // Rutas relativas a la base: así respetan un posible prefijo de proxy.
     Recent("Añadidos recientemente", "opds/new"),
     Title("Título", "opds/books/letter/00"),
+    Popular("Más descargados", "opds/hot"),
+    // Calibre-Web solo incluye aquí los de cinco estrellas.
+    Rated("Mejor valorados", "opds/rated"),
+    Random("Al azar", "opds/discover"),
 }
 
 /**

@@ -118,7 +118,7 @@ Objetivo: conectar con la biblioteca real. Cubre RF-01 a RF-05 y RF-09.
 - [x] Pruebas unitarias del parser con los fixtures de la Fase 0.
 - [x] ~~`PagingSource` de Paging 3~~ Carga por cursor `rel="next"` con precarga una página antes del final. Paging 3 está pensado para listas perezosas; la cuadrícula E Ink trabaja con páginas fijas y OPDS no da el total.
 - [x] Búsqueda por título y autor; navegación por autor, serie y etiquetas. Una pantalla genérica recorre cualquier feed OPDS (letras → autores → libros); la ficha enlaza «Más del autor» y «Ver la serie» buscando el nombre. Probado en el BOOX con el servidor real.
-- [ ] Orden por título, autor y fecha cuando el servidor lo ofrezca.
+- [x] Orden por título, autor y fecha cuando el servidor lo ofrezca. OPDS no tiene parámetro de orden, cada orden es un feed: añadidos recientemente (fecha), título, más descargados, mejor valorados (solo cinco estrellas) y al azar. Por autor se llega desde Explorar → Autores. Probado en el BOOX.
 - [x] Mensaje claro sin resultados; búsqueda, orden y página conservados al volver de una ficha.
 
 ### Portadas
@@ -135,7 +135,7 @@ Objetivo: conectar con la biblioteca real. Cubre RF-01 a RF-05 y RF-09.
 - [x] Ficha del libro (RF-04): portada, autores, serie, valoración, sinopsis, etiquetas, idioma y estado de cada formato. «Leer» abre el archivo en otra app hasta que llegue el lector (Fase 3).
 
 ### Sin conexión (RF-09)
-- [x] Descargas y ficha funcionan con el servidor caído. Pendiente de probar en modo avión en el BOOX.
+- [x] Descargas y ficha funcionan con el servidor caído. Probado en modo avión en el BOOX.
 - [x] Distinción visual monocroma entre descargado y solo en servidor: marca negra con ✓ en la portada y en la lista.
 
 **Criterio de salida (M2):** catálogo real navegable con portadas; al menos un EPUB y un PDF descargados; Descargas funciona en modo avión.
