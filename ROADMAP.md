@@ -210,7 +210,7 @@ Objetivo: primera versión instalable.
 - [ ] Recorrer los **criterios de aceptación** (abajo) en el BOOX.
 - [x] Pantalla de licencias de terceros. *En Ajustes → Acerca de: cada biblioteca que entra en el APK (sacadas de `releaseRuntimeClasspath` y del desazucarado) con autor y licencia, y la dirección de cada texto de licencia. Hay que mantenerla al añadir dependencias.*
 - [ ] Generar keystore de firma y **copia de seguridad** fuera del repositorio.
-- [ ] Build `release` firmado (R8/minificación revisada con Readium).
+- [x] Build `release` firmado (R8/minificación revisada con Readium). *Firma leída de un `keystore.properties` fuera del repositorio (`BIBLIOTECAGO_SIGNING` o `~/.bibliotecago/`), documentado en el README. R8 con recorte de recursos compila sin avisos con las reglas que traen las propias bibliotecas; firmado con la clave debug, arranca en el emulador. Falta crear la keystore real y probar los lectores con el release en el BOOX.*
 - [ ] Documentar instalación, actualización e instalación de nuevas versiones.
 - [ ] Etiquetar `v1.0.0`.
 

@@ -142,11 +142,13 @@ internal class PdfDocument private constructor(
         return if (found.width() < full.width() * MIN_CONTENT || found.height() < full.height() * MIN_CONTENT) full else found
     }
 
-    override fun close() = synchronized(renderer) {
-        if (closed) return
-        closed = true
-        renderer.close()
-        fd.close()
+    override fun close() {
+        synchronized(renderer) {
+            if (closed) return
+            closed = true
+            renderer.close()
+            fd.close()
+        }
     }
 
     companion object {

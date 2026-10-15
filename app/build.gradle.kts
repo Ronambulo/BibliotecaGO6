@@ -1,6 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+/**
+ * Firma release: datos en un `keystore.properties` FUERA del repositorio. Se
+ * busca en la ruta de la variable de entorno `BIBLIOTECAGO_SIGNING` o, si no
+ * está, en `~/.bibliotecago/keystore.properties`. Claves: `storeFile`
+ * (ruta al .jks), `storePassword`, `keyAlias` y `keyPassword`. Sin el
+ * archivo, el APK release sale sin firmar.
+ */
+val signingFile = (System.getenv("BIBLIOTECAGO_SIGNING")?.let(::File)
+    ?: File(System.getProperty("user.home"), ".bibliotecago/keystore.properties"))
+val signing = signingFile.takeIf { it.isFile }?.let { file ->
+    Properties().apply { file.inputStream().use(::load) }
 }
 
 android {
@@ -15,14 +30,26 @@ android {
         versionName = "0.1.0"
     }
 
-    // La firma release se configurará en la Fase 5 leyendo un keystore.properties
-    // que vive FUERA del repositorio (ver .gitignore).
+    signingConfigs {
+        if (signing != null) {
+            create("release") {
+                // Ruta relativa: respecto al propio keystore.properties.
+                storeFile = signingFile.parentFile.resolve(signing.getProperty("storeFile"))
+                storePassword = signing.getProperty("storePassword")
+                keyAlias = signing.getProperty("keyAlias")
+                keyPassword = signing.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
         }
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

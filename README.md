@@ -115,6 +115,31 @@ Requiere Android Studio (o el Android SDK con `ANDROID_HOME`) y JDK 17+.
 
 `checkNoAnimations` falla si aparece en `src/` alguna API que anime (`animate*`, `AnimatedVisibility`, `AnimatedContent`, `Crossfade`, ripple, transiciones o `Pager`).
 
+### Build release firmado
+
+El release pasa por R8 (minificación y recorte de recursos). La clave de firma y sus contraseñas **nunca** entran en el repositorio: Gradle las lee de un `keystore.properties` externo, en la ruta de la variable de entorno `BIBLIOTECAGO_SIGNING` o, si no está, en `~/.bibliotecago/keystore.properties`.
+
+1. Crear la clave una sola vez (validez de ~27 años; Android exige la misma clave para actualizar):
+
+   ```
+   keytool -genkeypair -v -keystore ~/.bibliotecago/bibliotecago.jks -alias bibliotecago -keyalg RSA -keysize 4096 -validity 10000
+   ```
+
+2. Crear `~/.bibliotecago/keystore.properties` (`storeFile` puede ser relativo a este archivo):
+
+   ```
+   storeFile=bibliotecago.jks
+   storePassword=…
+   keyAlias=bibliotecago
+   keyPassword=…
+   ```
+
+3. Compilar: `./gradlew assembleRelease`. El APK queda en `app/build/outputs/apk/release/app-release.apk`. Sin `keystore.properties` sale `app-release-unsigned.apk`, que no se puede instalar.
+
+4. **Copia de seguridad** del `.jks` y de las contraseñas fuera del ordenador (gestor de contraseñas y una copia sin conexión). Si se pierde la clave, las nuevas versiones no podrán instalarse encima: habría que desinstalar y se perdería el progreso de lectura.
+
+El release usa el id `com.bibliotecago` y el debug `com.bibliotecago.debug`, así que pueden convivir en el mismo dispositivo.
+
 ---
 
 ## Requisitos del servidor
