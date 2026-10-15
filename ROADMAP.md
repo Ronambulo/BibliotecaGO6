@@ -34,23 +34,23 @@ Objetivo: eliminar incertidumbre antes de escribir la app.
 - [ ] Anotar resolución, DPI y modos de refresco disponibles en BOOX.
 
 ### Servidor
-- [ ] Confirmar la versión de Calibre-Web (0.6.27) en el `docker-compose.yml`.
-- [ ] Montar el volumen de la biblioteca **con escritura** (sin `:ro`).
-- [ ] Activar la subida de archivos con EPUB y PDF permitidos.
-- [ ] (Opcional) Añadir el mod `universal-calibre` de LinuxServer.
+- [x] Confirmar la versión de Calibre-Web (0.6.27) en el `docker-compose.yml`. Imagen `linuxserver/calibre-web:0.6.27` sin digest: la 0.6.24 de la tienda de ZimaOS falla con bibliotecas creadas por Calibre 9 (`no such column: books.isbn`).
+- [x] Montar el volumen de la biblioteca **con escritura** (sin `:ro`): `/media/RAID_1/Media/Books:/books`, propiedad de `PUID 1000`.
+- [x] Activar la subida de archivos con EPUB y PDF permitidos (vaciar la ruta de Kepubify en *Binarios externos* para poder guardar).
+- [x] (Opcional) Añadir el mod `universal-calibre` de LinuxServer. Se reinstala en cada recreación del contenedor: la web tarda unos minutos en responder.
 - [ ] Publicar Calibre-Web en un hostname propio del túnel de Cloudflare.
-- [ ] Crear el **usuario de lectura** para la app (sin admin, subida ni edición).
+- [x] Crear el **usuario de lectura** para la app (sin admin, subida ni edición). Solo *Permitir descargas*; las casillas «Mostrar…» se dejan activas porque también filtran las secciones del feed OPDS.
 - [ ] Contraseñas fuertes, registro público desactivado, limitador de login activado.
 - [ ] Regla de Cloudflare: **no cachear** `/opds` ni las descargas.
 - [ ] (Opcional) Rate limiting en Cloudflare para la ruta de login.
 - [ ] Configurar copia de seguridad periódica de la biblioteca y de `config/`.
 
 ### Integración OPDS (apartado 9.3)
-- [ ] Confirmar la URL OPDS exacta (`/opds`) y guardar respuestas de ejemplo como fixtures.
+- [ ] Confirmar la URL OPDS exacta (`/opds`) y guardar respuestas de ejemplo como fixtures. Raíz confirmada en LAN y guardada en `catalog/src/test/resources/opds/root.xml`: enlaces **relativos**, búsqueda en `/opds/search/{searchTerms}` (ruta, no query) y títulos traducidos al idioma del usuario (la app debe guiarse por `href`, no por el título). Feeds de adquisición guardados en `new.xml` (EPUB + PDF) y `search.xml`.
 - [ ] Verificar autenticación básica con el usuario de lectura (`curl -u`).
-- [ ] Documentar cómo se obtienen portadas y enlaces de descarga.
-- [ ] Documentar los formatos que aparecen por libro.
-- [ ] Probar búsqueda OPDS y paginación (`next`, tamaño de página).
+- [x] Documentar cómo se obtienen portadas y enlaces de descarga. Portada y miniatura comparten `/opds/cover/{id}` (`image/jpeg`); cada formato es un enlace `http://opds-spec.org/acquisition` a `/opds/download/{id}/{formato}/` con `type`, `length` (bytes) y `mtime`. El `id` numérico de Calibre solo aparece en esos enlaces; el `<id>` de la entrada es el `urn:uuid` del libro. Sin sinopsis, `<content>` llega como un `div` vacío, y una fecha de publicación sin rellenar llega como `101-01-01T00:00:00+00:00`: el parser debe tolerarla.
+- [x] Documentar los formatos que aparecen por libro: un enlace de adquisición por formato, con `title` (`EPUB`, `PDF`) y `type` (`application/epub+zip`, `application/pdf`). Otros metadatos del libro: un `<author>` por autor, idioma en `dcterms:language` (ISO 639-3), etiquetas como `<category term label>`, y en `<content>` unas líneas `RATING:` / `TAGS:` seguidas de la sinopsis en un `<p>` con el HTML **escapado** (hay que desescaparlo y quitarle las etiquetas).
+- [x] Probar búsqueda OPDS y paginación (`next`, tamaño de página). Búsqueda: `/opds/search/{texto}` devuelve un feed de adquisición con el mismo formato de entrada. Paginación: enlace `rel="next"` a `?offset=N` (N = número de entradas ya servidas) mientras quedan resultados; el tamaño de página es «Libros por página» (60). El enlace `self` no incluye el `offset`. Fixture: `new-page1.xml`.
 - [ ] Comprobar que la URL del túnel y la local devuelven enlaces equivalentes (rutas relativas o URL base correcta).
 
 ### Motores de lectura

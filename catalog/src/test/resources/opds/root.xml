@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <icon>/static/favicon.ico</icon>
+  <id>urn:uuid:2853dacf-ed79-42f5-8e8a-a7bb3d1ae6a2</id>
+  <updated>2026-10-15T18:37:10+00:00</updated>
+  <link rel="self" href="/opds" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <link rel="start" title="Iniciar" href="/opds"
+        type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <link rel="search"
+      href="/opds/osd"
+      type="application/opensearchdescription+xml"/>
+  <link type="application/atom+xml" rel="search" title="Buscar" href="/opds/search/{searchTerms}" />
+  <title>Calibre-Web</title>
+  <author>
+    <name>Calibre-Web</name>
+    <uri>https://github.com/janeczku/calibre-web</uri>
+  </author>
+  <entry>
+    <title>Libros alfabéticos</title>
+    <link href="/opds/books" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/books</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros ordenados alfabéticamente</content>
+  </entry>
+
+  <entry>
+    <title>Libros populares</title>
+    <link href="/opds/hot" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/hot</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Publicaciones populares de este catálogo basadas en las descargas.</content>
+  </entry>
+
+
+  <entry>
+    <title>Libros mejor valorados</title>
+    <link href="/opds/rated" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/rated</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Publicaciones populares de este catálogo basadas en la valoración.</content>
+  </entry>
+
+
+  <entry>
+    <title>Libros añadidos recientemente</title>
+    <link href="/opds/new" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/new</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Últimos libros</content>
+  </entry>
+
+
+  <entry>
+    <title>Libros al azar</title>
+    <link href="/opds/discover" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/discover</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Mostrar libros al azar</content>
+  </entry>
+
+
+  <entry>
+    <title>Libros leídos</title>
+    <link href="/opds/readbooks" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/readbooks</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros leídos</content>
+  </entry>
+  <entry>
+    <title>Libros no leídos</title>
+    <link href="/opds/unreadbooks" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/unreadbooks</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros no leídos</content>
+  </entry>
+
+
+  <entry>
+    <title>Autores</title>
+    <link href="/opds/author" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/author</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros ordenados por autor</content>
+  </entry>
+
+
+   <entry>
+    <title>Editores</title>
+    <link href="/opds/publisher" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/publisher</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros ordenados por editor</content>
+  </entry>
+
+
+  <entry>
+    <title>Categorías</title>
+    <link href="/opds/category" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/category</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros ordenados por categorías</content>
+  </entry>
+
+
+  <entry>
+    <title>Series</title>
+    <link href="/opds/series" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/series</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros ordenados por series</content>
+  </entry>
+
+
+  <entry>
+    <title>Idiomas</title>
+    <link href="/opds/language/" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/language/</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros ordenados por idioma</content>
+  </entry>
+
+
+  <entry>
+    <title>Valoraciones</title>
+    <link href="/opds/ratings" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/ratings</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros ordenados por valoración</content>
+  </entry>
+
+
+  <entry>
+    <title>Formatos de archivo</title>
+    <link href="/opds/formats" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/formats</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros ordenados por formato de archivo</content>
+  </entry>
+
+
+  <entry>
+    <title>Estanterías</title>
+    <link  href="/opds/shelfindex" type="application/atom+xml;profile=opds-catalog"/>
+    <id>/opds/shelfindex</id>
+    <updated>2026-10-15T18:37:10+00:00</updated>
+    <content type="text">Libros organizados en estanterías</content>
+  </entry>
+
+</feed>

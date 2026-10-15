@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/terms/" xmlns:dcterms="http://purl.org/dc/terms/">
+  <icon>/static/favicon.ico</icon>
+  <id>urn:uuid:2853dacf-ed79-42f5-8e8a-a7bb3d1ae6a2</id>
+  <updated>2026-10-15T18:40:23+00:00</updated>
+  <link rel="self"
+        href="/opds/search/TFG?"
+        type="application/atom+xml;profile=opds-catalog;type=feed;kind=navigation"/>
+  <link rel="start"
+        href="/opds"
+        type="application/atom+xml;profile=opds-catalog;type=feed;kind=navigation"/>
+  <link rel="up"
+        href="/opds"
+        type="application/atom+xml;profile=opds-catalog;type=feed;kind=navigation"/>
+
+
+
+    <link rel="search"
+      href="/opds/osd"
+      type="application/opensearchdescription+xml"/>
+  <link type="application/atom+xml" rel="search" title="Buscar" href="/opds/search/{searchTerms}" />
+  <title>Calibre-Web</title>
+  <author>
+    <name>Calibre-Web</name>
+    <uri>https://github.com/janeczku/calibre-web</uri>
+  </author>
+
+
+
+  <entry>
+    <title>TFG - Enrique Rodríguez del Real</title>
+    <id>urn:uuid:5f0724ec-6f05-40f4-ab98-2d6f15e93b85</id>
+    <updated>2026-10-15T16:32:01+00:00</updated>
+
+      <author>
+        <name>Enrique Rodriguez del Real</name>
+      </author>
+
+
+    <published>101-01-01T00:00:00+00:00</published>
+
+
+    <content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">
+
+
+
+
+
+
+
+    </div></content>
+
+    <link type="image/jpeg" href="/opds/cover/1" rel="http://opds-spec.org/image"/>
+    <link type="image/jpeg" href="/opds/cover/1" rel="http://opds-spec.org/image/thumbnail"/>
+
+
+    <link rel="http://opds-spec.org/acquisition" href="/opds/download/1/pdf/"
+          length="620626" title="PDF" mtime="2026-10-15T16:32:01+00:00" type="application/pdf"/>
+
+  </entry>
+
+
+
+
+</feed>
