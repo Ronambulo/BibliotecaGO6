@@ -1,0 +1,33 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Configuración local (ruta del SDK, etc.)
+local.properties
+
+# Firma: el keystore y sus credenciales viven FUERA del repositorio
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# APK / AAB generados
+*.apk
+*.aab
+*.ap_
+
+# Fixtures OPDS reales pueden contener datos de la biblioteca: revisar antes de añadir
+# (se guardarán en catalog/src/test/resources una vez anonimizados)
+
+# Sistema
+.DS_Store
+Thumbs.db
