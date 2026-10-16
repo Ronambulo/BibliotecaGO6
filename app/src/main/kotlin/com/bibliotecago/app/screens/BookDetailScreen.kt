@@ -122,28 +122,33 @@ fun BookDetailScreen(bookId: BookId, onBack: () -> Unit, onOpenFeed: (href: Stri
     }
 }
 
+/** Está a medias: hay progreso guardado, sin terminar y sin marcar como leído. */
+private fun BookDetailViewModel.isReading(): Boolean {
+    val fraction = progress?.progression ?: return false
+    return !finished && fraction > 0.0 && fraction < 1.0
+}
+
 /**
- * Páginas del libro y, si está a medias, por cuál va: «Página 42 de 310 · 13 %»
- * con una barra. Sin páginas conocidas (no descargado) muestra solo el porcentaje.
+ * Si está a medias, por cuál va: «Página 42 de 310 · 13 %» con una barra fina.
+ * Sin páginas conocidas muestra solo el porcentaje.
  */
 @Composable
-private fun PagesInfo(vm: BookDetailViewModel) {
+private fun ReadingInfo(vm: BookDetailViewModel) {
     val total = vm.pageCount
     val progress = vm.progress
     val fraction = progress?.progression?.toFloat()?.coerceIn(0f, 1f)
-    val reading = progress != null && !vm.finished && fraction != null && fraction > 0f && fraction < 1f
+    val reading = vm.isReading()
     val text = when {
         reading && total != null && progress?.page != null ->
             "Página ${progress.page} de $total · ${percent(fraction!!)}"
-        reading -> "Leído ${percent(fraction!!)}" + (total?.let { " · $it páginas" } ?: "")
-        total != null -> "$total páginas"
+        reading -> "Leído ${percent(fraction!!)}"
         else -> return
     }
     Spacer(Modifier.height(10.dp))
     EinkText(text, style = EinkTheme.typography.caption, maxLines = 1)
     if (reading) {
         Spacer(Modifier.height(6.dp))
-        EinkProgressBar(fraction!!, Modifier.fillMaxWidth(), height = 4.dp)
+        EinkProgressBar(fraction!!, Modifier.width(140.dp), height = 2.dp)
     }
 }
 
@@ -195,11 +200,18 @@ private fun Header(book: Book, vm: BookDetailViewModel, onOpenFeed: (String, Str
                     if (downloaded) DownloadedTag()
                 }
             }
-            PagesInfo(vm)
-            // El idioma al lado de la portada, donde sobra sitio.
+            ReadingInfo(vm)
+            // Idioma y páginas al lado de la portada, donde sobra sitio.
             book.language?.let {
                 Spacer(Modifier.height(10.dp))
                 EinkText("Idioma: ${languageName(it)}", style = EinkTheme.typography.caption, color = EinkTheme.colors.muted)
+            }
+            // OPDS no da las páginas: solo se saben con el archivo descargado. A medias
+            // ya salen en «Página 4 de 81», así que el total solo va sin empezar o leído.
+            val pages = vm.pageCount
+            if (pages != null && !vm.isReading()) {
+                Spacer(Modifier.height(if (book.language != null) 4.dp else 10.dp))
+                EinkText("Páginas: $pages", style = EinkTheme.typography.caption, color = EinkTheme.colors.muted)
             }
         }
     }
