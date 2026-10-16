@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +71,11 @@ fun LibraryScreen(
     var searching by rememberSaveable { mutableStateOf(false) }
     var searchText by rememberSaveable { mutableStateOf("") }
     val gridPage = rememberEinkPageState()
+    // Mirar «Añadidos recientemente» en la biblioteca cuenta como haber visto los nuevos de Inicio.
+    val showingRecent = vm.listing == CatalogListing.Recent && !vm.lastOpened && vm.query == null &&
+        vm.state is LibraryState.Content
+    val recentBooks by container.recentBooks.collectAsState()
+    LaunchedEffect(showingRecent, recentBooks) { if (showingRecent) container.markRecentSeen() }
     val listPage = rememberEinkPageState()
     val resetPages = {
         gridPage.page = 0

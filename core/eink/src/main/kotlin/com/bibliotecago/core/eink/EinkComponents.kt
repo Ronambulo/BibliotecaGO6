@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -482,11 +483,15 @@ fun EinkTopBar(
     }
 }
 
-/** Título de sección con una acción de texto opcional a la derecha. */
+/**
+ * Título de sección con una acción de texto opcional a la derecha. [detail] va
+ * detrás del título, separado por « · » y sin negrita.
+ */
 @Composable
 fun EinkSectionHeader(
     title: String,
     modifier: Modifier = Modifier,
+    detail: String? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
@@ -494,7 +499,16 @@ fun EinkSectionHeader(
         modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        EinkText(title, Modifier.weight(1f), style = EinkTheme.typography.section, maxLines = 1)
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            EinkText(title, style = EinkTheme.typography.section, maxLines = 1)
+            if (detail != null) {
+                EinkText(
+                    " · $detail",
+                    style = EinkTheme.typography.section.copy(fontWeight = FontWeight.Normal),
+                    maxLines = 1,
+                )
+            }
+        }
         if (actionLabel != null && onAction != null) {
             EinkButton(actionLabel, onAction, style = EinkButtonStyle.Text, height = 40.dp)
         }

@@ -83,11 +83,11 @@ Objetivo: interfaz navegable con datos ficticios, validada en E Ink. Cubre la ba
 
 ### Pantallas con datos ficticios
 *Hechas directamente con datos reales del servidor.*
-- [ ] Inicio: continuar leyendo, recientes, estado del servidor, acceso a búsqueda. *(continuar leyendo y búsqueda hechos; faltan recientes y estado del servidor)*
+- [x] Inicio: continuar leyendo, recientes, estado del servidor, acceso a búsqueda. *(recientes y estado salen de la consulta periódica; el estado abre la configuración del servidor)*
 - [x] Biblioteca: cuadrícula paginada, vista lista, búsqueda, filtros, indicador de descargado. *(órdenes en lugar de filtros; también insignia de leído)*
 - [x] Ficha del libro: portada, metadatos, sinopsis, formatos, botón Leer/Descargar, quitar copia local.
 - [x] Descargas: lista local, espacio ocupado, quitar copia.
-- [ ] Ajustes: servidor, lectura, almacenamiento, versión y licencias. *(falta la sección de lectura)*
+- [x] Ajustes: servidor, lectura, almacenamiento, versión y licencias. *(Lectura: los mismos ajustes de EPUB y PDF que la hoja del lector)*
 - [x] Estados vacíos y de error en todas las pantallas.
 
 ### Validación en el dispositivo
@@ -177,7 +177,7 @@ Objetivo: leer EPUB y PDF dentro de la app. Cubre RF-06, RF-07 y RF-08.
 
 ### Ajuste E Ink
 - [ ] Revisar refresco y gestos en el BOOX; ajustar zonas táctiles.
-- [ ] Decidir si el tema oscuro de lectura se mantiene.
+- [x] Decidir si el tema oscuro de lectura se mantiene. *Se mantiene como opción; por defecto, claro.*
 
 **Criterio de salida (M3):** EPUB y PDF abren en la app, recuerdan la posición tras cerrar; marcadores y búsqueda funcionan en EPUB; lectura cómoda en escala de grises.
 

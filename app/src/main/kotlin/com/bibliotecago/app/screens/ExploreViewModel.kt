@@ -47,6 +47,16 @@ class ExploreViewModel(private val app: AppContainer, private val href: String) 
         reload()
         viewModelScope.launch { app.downloadedBookIds().collect { downloaded = it } }
         viewModelScope.launch { app.finishedBookIds().collect { finished = it } }
+        // Vuelve la conexión: si la pantalla se quedó en error, se reintenta sola.
+        viewModelScope.launch {
+            app.reconnected.collect {
+                when (val current = state) {
+                    is ExploreState.Failed -> reload()
+                    is ExploreState.Content -> if (current.moreProblem != null) loadMore()
+                    ExploreState.Loading -> Unit
+                }
+            }
+        }
     }
 
     fun reload() {

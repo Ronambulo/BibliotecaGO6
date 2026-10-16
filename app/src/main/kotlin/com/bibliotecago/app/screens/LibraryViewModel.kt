@@ -1,5 +1,7 @@
 package com.bibliotecago.app.screens
 
+import android.content.Context
+import androidx.core.content.edit
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -39,13 +41,19 @@ sealed interface LibraryState {
  */
 class LibraryViewModel(private val app: AppContainer) : ViewModel() {
 
-    var listing by mutableStateOf(CatalogListing.Recent)
+    /** El orden elegido se guarda (junto a lista o cuadrícula) y se recupera al abrir la app. */
+    private val prefs = app.context.getSharedPreferences("ui", Context.MODE_PRIVATE)
+    private val savedOrder = prefs.getString(KEY_ORDER, null)
+
+    var listing by mutableStateOf(
+        CatalogListing.entries.firstOrNull { it.name == savedOrder } ?: CatalogListing.Recent
+    )
         private set
     /**
      * Orden «Último abierto»: todo el catálogo, primero los libros abiertos en
      * el lector (del más reciente al más antiguo) y luego el resto por título.
      */
-    var lastOpened by mutableStateOf(false)
+    var lastOpened by mutableStateOf(savedOrder == ORDER_LAST_OPENED)
         private set
     var state by mutableStateOf<LibraryState>(LibraryState.Loading)
         private set
@@ -72,15 +80,38 @@ class LibraryViewModel(private val app: AppContainer) : ViewModel() {
             app.downloadedBookIds().collect { downloaded = it }
         }
         viewModelScope.launch { app.finishedBookIds().collect { finished = it } }
-        // Libros nuevos de la consulta periódica: suben al principio de «Añadidos
-        // recientemente» sin recargar, para no mover lo que se está mirando.
+        // Libros nuevos de la consulta periódica. En «Añadidos recientemente» suben al
+        // principio sin recargar; en otro orden se vuelve a pedir lo ya cargado y se
+        // cambia sin pasar por «Cargando», para no mover lo que se está mirando.
         viewModelScope.launch {
+            var knownRecent: Set<BookId>? = null
             app.recentBooks.collect { fresh ->
+                if (fresh == null) {
+                    knownRecent = null
+                    return@collect
+                }
+                val ids = fresh.mapTo(HashSet()) { it.id }
+                val arrived = knownRecent?.let { (ids - it).isNotEmpty() } ?: false
+                knownRecent = ids
                 val current = state as? LibraryState.Content ?: return@collect
-                if (listing != CatalogListing.Recent || lastOpened || query != null) return@collect
-                val known = current.books.mapTo(HashSet()) { it.id }
-                val added = fresh.filter { it.id !in known }
-                if (added.isNotEmpty()) state = current.copy(books = added + current.books)
+                if (query != null) return@collect
+                if (listing == CatalogListing.Recent && !lastOpened) {
+                    val known = current.books.mapTo(HashSet()) { it.id }
+                    val added = fresh.filter { it.id !in known }
+                    if (added.isNotEmpty()) state = current.copy(books = added + current.books)
+                } else if (arrived) {
+                    refreshInPlace()
+                }
+            }
+        }
+        // Vuelve la conexión: si la pantalla se quedó en error, se reintenta sola.
+        viewModelScope.launch {
+            app.reconnected.collect {
+                when (val current = state) {
+                    is LibraryState.Failed -> reload()
+                    is LibraryState.Content -> if (current.moreProblem != null) loadMore()
+                    LibraryState.Loading -> Unit
+                }
             }
         }
         // Al volver del lector, el libro abierto sube al principio sin recargar.
@@ -111,6 +142,7 @@ class LibraryViewModel(private val app: AppContainer) : ViewModel() {
         listing = newListing
         lastOpened = false
         query = null
+        prefs.edit { putString(KEY_ORDER, newListing.name) }
         reload()
     }
 
@@ -118,6 +150,7 @@ class LibraryViewModel(private val app: AppContainer) : ViewModel() {
         if (lastOpened && query == null) return
         lastOpened = true
         query = null
+        prefs.edit { putString(KEY_ORDER, ORDER_LAST_OPENED) }
         reload()
     }
 
@@ -128,10 +161,7 @@ class LibraryViewModel(private val app: AppContainer) : ViewModel() {
         job = viewModelScope.launch {
             state = try {
                 if (lastOpened && query == null) {
-                    val opened = openedIds().first().mapNotNull { id ->
-                        BookId(id).let { app.books[it] ?: app.downloads.savedBook(it) }
-                    }
-                    accept(app.catalog.listing(CatalogListing.Title), previous = opened)
+                    accept(app.catalog.listing(CatalogListing.Title), previous = openedBooks())
                 } else {
                     val feed = query?.let { app.catalog.search(it) } ?: app.catalog.listing(listing)
                     accept(feed, previous = emptyList())
@@ -160,6 +190,40 @@ class LibraryViewModel(private val app: AppContainer) : ViewModel() {
         }
     }
 
+    /**
+     * Vuelve a pedir el listado desde la primera página hasta tener al menos lo
+     * que ya había cargado, y lo cambia de una vez. Si falla, se queda lo que había.
+     */
+    private fun refreshInPlace() {
+        val current = state as? LibraryState.Content ?: return
+        if (job?.isActive == true) return
+        val wanted = current.books.size
+        val oldNext = nextHref
+        job = viewModelScope.launch {
+            try {
+                var fresh = if (lastOpened) {
+                    accept(app.catalog.listing(CatalogListing.Title), previous = openedBooks())
+                } else {
+                    accept(app.catalog.listing(listing), previous = emptyList())
+                }
+                while (fresh.books.size < wanted) {
+                    val href = nextHref ?: break
+                    fresh = accept(app.catalog.feed(href), previous = fresh.books)
+                }
+                state = fresh
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                nextHref = oldNext
+            }
+        }
+    }
+
+    /** Libros abiertos en el lector, del más reciente al más antiguo. */
+    private suspend fun openedBooks() = openedIds().first().mapNotNull { id ->
+        BookId(id).let { app.books[it] ?: app.downloads.savedBook(it) }
+    }
+
     /** Ids de los libros abiertos en el lector, del más reciente al más antiguo. */
     private fun openedIds() = app.library.progress.observeAll()
         .map { rows -> rows.map { it.bookId }.distinct() }
@@ -180,3 +244,6 @@ class LibraryViewModel(private val app: AppContainer) : ViewModel() {
         return LibraryState.Content(books, hasMore = feed.nextHref != null)
     }
 }
+
+private const val KEY_ORDER = "library_order"
+private const val ORDER_LAST_OPENED = "lastOpened"

@@ -24,9 +24,17 @@ class MainActivity : ComponentActivity() {
         // consulta en el acto. Sin WorkManager: en segundo plano solo gastaría batería.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                while (true) {
-                    appContainer.poll()
-                    delay(POLL_INTERVAL)
+                appContainer.inForeground = true
+                try {
+                    while (true) {
+                        appContainer.poll()
+                        // Sin conexión se reintenta antes; al volver la red, además,
+                        // se consulta en el acto (AppContainer.start).
+                        val offline = appContainer.serverStatus.value is ServerStatus.Offline
+                        delay(if (offline) OFFLINE_INTERVAL else POLL_INTERVAL)
+                    }
+                } finally {
+                    appContainer.inForeground = false
                 }
             }
         }
@@ -34,5 +42,6 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         val POLL_INTERVAL = 5.minutes
+        val OFFLINE_INTERVAL = 1.minutes
     }
 }

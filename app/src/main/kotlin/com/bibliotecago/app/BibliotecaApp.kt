@@ -28,6 +28,8 @@ import com.bibliotecago.app.screens.ExploreScreen
 import com.bibliotecago.app.screens.HomeScreen
 import com.bibliotecago.app.screens.LibraryScreen
 import com.bibliotecago.app.screens.LicensesScreen
+import com.bibliotecago.app.screens.ReadingSettingsScreen
+import com.bibliotecago.catalog.CatalogListing
 import com.bibliotecago.app.screens.ServerSettingsScreen
 import com.bibliotecago.app.screens.SettingsScreen
 import com.bibliotecago.core.eink.EinkBottomBar
@@ -73,6 +75,9 @@ fun BibliotecaApp() {
                     HomeScreen(
                         onOpenLibrary = { navController.navigateTop(TopDestination.Library) },
                         onOpenDownloads = { navController.navigateTop(TopDestination.Downloads) },
+                        onOpenRecent = { navController.navigateToFeed(CatalogListing.Recent.href, CatalogListing.Recent.label) },
+                        onOpenBook = navController::navigateToBook,
+                        onOpenServer = { navController.navigate(SERVER_ROUTE) },
                     )
                 }
                 composable(TopDestination.Library.route) {
@@ -115,8 +120,12 @@ fun BibliotecaApp() {
                 composable(TopDestination.Settings.route) {
                     SettingsScreen(
                         onOpenServer = { navController.navigate(SERVER_ROUTE) },
+                        onOpenReading = { navController.navigate(READING_ROUTE) },
                         onOpenLicenses = { navController.navigate(LICENSES_ROUTE) },
                     )
+                }
+                composable(READING_ROUTE) {
+                    ReadingSettingsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(SERVER_ROUTE) {
                     ServerSettingsScreen(onBack = { navController.popBackStack() })
@@ -141,6 +150,7 @@ fun BibliotecaApp() {
 private const val BOOK_ROUTE = "libro/{id}"
 private const val SERVER_ROUTE = "ajustes/servidor"
 private const val LICENSES_ROUTE = "ajustes/licencias"
+private const val READING_ROUTE = "ajustes/lectura"
 private const val FEED_ROUTE = "explorar?href={href}&title={title}"
 
 /** Un feed OPDS por su ruta en el servidor: índices, autores, series, búsquedas… */
