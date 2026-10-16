@@ -4,8 +4,8 @@
         Tema de ventana para E Ink: papel blanco, barras claras y sin animaciones
         de ventana ni de actividad. El aspecto de la interfaz lo pone EinkTheme.
     -->
-    <style name="Theme.BibliotecaGO" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@android:color/white</item>
+    <style name="Theme.BibliotecaGO.Base" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_window</item>
         <item name="android:colorBackground">@android:color/white</item>
         <item name="android:statusBarColor">@android:color/white</item>
         <item name="android:navigationBarColor">@android:color/white</item>
@@ -15,4 +15,7 @@
         <item name="android:windowActivityTransitions">false</item>
         <item name="android:windowContentTransitions">false</item>
     </style>
+
+    <!-- En Android 12+ se añade la pantalla de inicio del sistema (values-v31). -->
+    <style name="Theme.BibliotecaGO" parent="Theme.BibliotecaGO.Base" />
 </resources>
