@@ -56,8 +56,11 @@ data class ReaderSettings(
     }
 }
 
-/** Guarda los ajustes en unas SharedPreferences propias del lector. */
-internal class ReaderSettingsStore(context: Context) {
+/**
+ * Guarda los ajustes en unas SharedPreferences propias del lector. Pública para
+ * que Ajustes los cambie; el lector los lee al abrir cada libro.
+ */
+class ReaderSettingsStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("reader_epub", Context.MODE_PRIVATE)
 
     fun load() = ReaderSettings(

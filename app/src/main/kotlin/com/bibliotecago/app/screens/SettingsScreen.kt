@@ -35,7 +35,17 @@ import com.bibliotecago.core.eink.EinkDivider
 import com.bibliotecago.core.eink.EinkEyebrow
 import com.bibliotecago.core.eink.EinkIcon
 import com.bibliotecago.core.eink.EinkIcons
+import com.bibliotecago.core.eink.EinkIconButton
+import com.bibliotecago.core.eink.EinkSegmented
 import com.bibliotecago.core.eink.EinkSwitch
+import com.bibliotecago.reader.epub.ReaderFont
+import com.bibliotecago.reader.epub.ReaderSettings
+import com.bibliotecago.reader.epub.ReaderSettingsStore
+import com.bibliotecago.reader.pdf.PdfFit
+import com.bibliotecago.reader.pdf.PdfSettings
+import com.bibliotecago.reader.pdf.PdfSettingsStore
+import androidx.compose.runtime.remember
+import androidx.compose.ui.text.style.TextAlign
 import com.bibliotecago.core.eink.EinkText
 import com.bibliotecago.core.eink.EinkTextField
 import com.bibliotecago.core.eink.EinkTheme
@@ -45,10 +55,13 @@ import com.bibliotecago.server.EndpointReport
 
 /** Ajustes: grupos en tarjetas; el servidor tiene su propia página. */
 @Composable
-fun SettingsScreen(onOpenServer: () -> Unit, onOpenLicenses: () -> Unit) {
+fun SettingsScreen(onOpenServer: () -> Unit, onOpenReading: () -> Unit, onOpenLicenses: () -> Unit) {
     val container = LocalContext.current.appContainer
     val vm = viewModel { SettingsViewModel(container) }
     val prefs = rememberLibraryPrefs()
+    val context = LocalContext.current
+    // Se relee al volver de la página de lectura.
+    val reader = remember { ReaderSettingsStore(context) }.load()
     var confirmClearCache by rememberSaveable { mutableStateOf(false) }
     // Al volver a Ajustes desde otra pestaña puede haber nuevas descargas.
     LaunchedEffect(Unit) { vm.refreshStorage() }
@@ -73,6 +86,14 @@ fun SettingsScreen(onOpenServer: () -> Unit, onOpenLicenses: () -> Unit) {
                         "Sin configurar"
                     },
                     onClick = onOpenServer,
+                )
+            }
+            Group("Lectura") {
+                NavRow(
+                    icon = EinkIcons.Text,
+                    title = "Lectura",
+                    detail = "Letra al ${reader.fontPercent} % · tema ${if (reader.dark) "oscuro" else "claro"}",
+                    onClick = onOpenReading,
                 )
             }
             Group("Biblioteca") {
@@ -124,6 +145,91 @@ fun SettingsScreen(onOpenServer: () -> Unit, onOpenLicenses: () -> Unit) {
                 vm.clearCoverCache()
                 confirmClearCache = false
             },
+        )
+    }
+}
+
+/**
+ * Ajustes de lectura para todos los libros, los mismos que la hoja del lector.
+ * Se aplican al abrir el siguiente libro.
+ */
+@Composable
+fun ReadingSettingsScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val epubStore = remember { ReaderSettingsStore(context) }
+    val pdfStore = remember { PdfSettingsStore(context) }
+    var epub by remember { mutableStateOf(epubStore.load()) }
+    var pdf by remember { mutableStateOf(pdfStore.load()) }
+    val updateEpub = { new: ReaderSettings -> epub = new; epubStore.save(new) }
+    val updatePdf = { new: PdfSettings -> pdf = new; pdfStore.save(new) }
+
+    Column(Modifier.fillMaxSize()) {
+        EinkTopBar(title = "Lectura", subtitle = "Para todos los libros", onBack = onBack)
+        Column(
+            Modifier
+                .weight(1f)
+                .einkVerticalScroll(rememberScrollState())
+                .padding(horizontal = EinkTheme.dimens.gutter)
+                .padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Group("EPUB") {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Column {
+                        EinkText("Tamaño de letra", style = EinkTheme.typography.label)
+                        Spacer(Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            EinkIconButton(
+                                EinkIcons.Minus, "Letra más pequeña", { updateEpub(epub.smallerFont()) },
+                                enabled = epub.fontScale > ReaderSettings.MIN_FONT,
+                            )
+                            EinkText(
+                                "${epub.fontPercent} %",
+                                Modifier.weight(1f),
+                                style = EinkTheme.typography.heading,
+                                textAlign = TextAlign.Center,
+                            )
+                            EinkIconButton(
+                                EinkIcons.Plus, "Letra más grande", { updateEpub(epub.largerFont()) },
+                                enabled = epub.fontScale < ReaderSettings.MAX_FONT,
+                            )
+                        }
+                    }
+                    Choice("Letra", ReaderFont.entries.map { it.label to it }, epub.font) { updateEpub(epub.copy(font = it)) }
+                    Choice("Interlineado", ReaderSettings.LINE_HEIGHTS, epub.lineHeight) { updateEpub(epub.copy(lineHeight = it)) }
+                    Choice("Márgenes", ReaderSettings.MARGINS, epub.margins) { updateEpub(epub.copy(margins = it)) }
+                    Choice("Tema", listOf("Claro" to false, "Oscuro" to true), epub.dark) { updateEpub(epub.copy(dark = it)) }
+                }
+            }
+            Group("PDF") {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Choice("Ajuste", PdfFit.entries.map { it.label to it }, pdf.fit) { updatePdf(pdf.copy(fit = it)) }
+                    Choice("Márgenes en blanco", listOf("Recortar" to true, "Mantener" to false), pdf.crop) {
+                        updatePdf(pdf.copy(crop = it))
+                    }
+                }
+            }
+            EinkText(
+                "También se cambian desde el lector; el cambio vale para todos los libros.",
+                Modifier.padding(start = 4.dp, top = 4.dp),
+                style = EinkTheme.typography.caption,
+                color = EinkTheme.colors.muted,
+            )
+        }
+    }
+}
+
+/** Título y control segmentado con las opciones; marca la que coincide con [selected]. */
+@Composable
+private fun <T> Choice(title: String, options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
+    Column {
+        EinkText(title, style = EinkTheme.typography.label)
+        Spacer(Modifier.height(6.dp))
+        EinkSegmented(
+            options.map { it.first },
+            selectedIndex = options.indexOfFirst { it.second == selected },
+            onSelect = { onSelect(options[it].second) },
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

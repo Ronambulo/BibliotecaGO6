@@ -17,7 +17,8 @@ data class PdfSettings(
     val crop: Boolean = true,
 )
 
-internal class PdfSettingsStore(context: Context) {
+/** Pública para que Ajustes los cambie; el lector los lee al abrir cada libro. */
+class PdfSettingsStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("reader_pdf", Context.MODE_PRIVATE)
 
     fun load() = PdfSettings(
