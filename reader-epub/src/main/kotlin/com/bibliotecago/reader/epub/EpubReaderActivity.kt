@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import androidx.activity.addCallback
 import androidx.activity.viewModels
@@ -135,7 +134,10 @@ class EpubReaderActivity : FragmentActivity() {
         pager.addView(FragmentContainerView(this).apply { id = R.id.epub_navigator_container }, MATCH_PARENT, MATCH_PARENT)
         root.addView(pager, MATCH_PARENT, MATCH_PARENT)
         val folio = composeView { Folio() }
-        root.addView(folio, FrameLayout.LayoutParams(WRAP_CONTENT, pageMargin, Gravity.BOTTOM or Gravity.END))
+        // A todo el ancho y el texto alineado dentro: medida al ancho del
+        // contenido se quedaba a la izquierda. Sin nada pulsable, los toques
+        // en la franja siguen llegando al libro.
+        root.addView(folio, FrameLayout.LayoutParams(MATCH_PARENT, pageMargin, Gravity.BOTTOM))
         // El menú ocupa toda la pantalla solo mientras se ve: arriba volver y
         // título, abajo las herramientas, y tocar en medio lo cierra. Oculto
         // queda en GONE y los toques van directos al navegador.
@@ -291,7 +293,7 @@ class EpubReaderActivity : FragmentActivity() {
             if (position != null && total > 0) "$position/$total" else null,
             locations.totalProgression?.let { "${(it * 100).roundToInt()} %" },
         ).joinToString(" - ")
-        Box(Modifier.fillMaxHeight().padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().padding(horizontal = 20.dp), contentAlignment = Alignment.CenterEnd) {
             EinkText(
                 text,
                 style = EinkTheme.typography.caption.copy(fontSize = 11.sp),
