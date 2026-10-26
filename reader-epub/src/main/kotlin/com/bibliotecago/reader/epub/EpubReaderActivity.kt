@@ -4,8 +4,10 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import androidx.activity.addCallback
 import androidx.activity.viewModels
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.bibliotecago.core.eink.EinkEyebrow
 import com.bibliotecago.core.eink.EinkIcon
@@ -125,8 +128,14 @@ class EpubReaderActivity : FragmentActivity() {
         val pager = SwipeTurnLayout(this) { forward ->
             navigator()?.let { if (forward) it.goForward(animated = false) else it.goBackward(animated = false) }
         }
+        // Readium apenas deja margen arriba y abajo en pantallas pequeñas: el
+        // hueco lo pone el contenedor, y el de abajo aloja el folio.
+        val pageMargin = (PAGE_MARGIN_DP * resources.displayMetrics.density).roundToInt()
+        pager.setPadding(0, pageMargin, 0, pageMargin)
         pager.addView(FragmentContainerView(this).apply { id = R.id.epub_navigator_container }, MATCH_PARENT, MATCH_PARENT)
         root.addView(pager, MATCH_PARENT, MATCH_PARENT)
+        val folio = composeView { Folio() }
+        root.addView(folio, FrameLayout.LayoutParams(WRAP_CONTENT, pageMargin, Gravity.BOTTOM or Gravity.END))
         // El menú ocupa toda la pantalla solo mientras se ve: arriba volver y
         // título, abajo las herramientas, y tocar en medio lo cierra. Oculto
         // queda en GONE y los toques van directos al navegador.
@@ -155,7 +164,11 @@ class EpubReaderActivity : FragmentActivity() {
                     }
                 }
                 launch {
-                    snapshotFlow { viewModel.settings }.collect { navigator()?.submitPreferences(it.toPreferences()) }
+                    snapshotFlow { viewModel.settings }.collect {
+                        navigator()?.submitPreferences(it.toPreferences())
+                        // Los márgenes, del mismo color que la página de Readium.
+                        pager.setBackgroundColor(if (it.dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                    }
                 }
             }
         }
@@ -264,6 +277,27 @@ class EpubReaderActivity : FragmentActivity() {
             } catch (_: ActivityNotFoundException) {
                 // Sin navegador instalado no hay dónde abrirlo.
             }
+        }
+    }
+
+    /** Folio en el margen de abajo a la derecha: página de cuántas y porcentaje leído. */
+    @Composable
+    private fun Folio() {
+        val state by viewModel.state.collectAsState()
+        val total = (state as? ReaderState.Ready)?.positionCount ?: 0
+        val locations = viewModel.locator?.locations ?: return
+        val position = locations.position
+        val text = listOfNotNull(
+            if (position != null && total > 0) "$position/$total" else null,
+            locations.totalProgression?.let { "${(it * 100).roundToInt()} %" },
+        ).joinToString(" - ")
+        Box(Modifier.fillMaxHeight().padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+            EinkText(
+                text,
+                style = EinkTheme.typography.caption.copy(fontSize = 11.sp),
+                color = if (viewModel.settings.dark) Color(0xFFBDBDBD) else EinkTheme.colors.muted,
+                maxLines = 1,
+            )
         }
     }
 
@@ -785,6 +819,8 @@ class EpubReaderActivity : FragmentActivity() {
 
     companion object {
         private const val NAVIGATOR_TAG = "navigator"
+        /** Margen de arriba y de abajo de la página; abajo también va el folio. */
+        private const val PAGE_MARGIN_DP = 32
         private const val TOC_ROWS = 10
         private const val BOOKMARK_ROWS = 6
         private const val SEARCH_ROWS = 6
