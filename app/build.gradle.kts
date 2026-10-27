@@ -29,7 +29,7 @@ android {
         // En GitHub Actions sube con cada ejecución, para que cada APK pueda
         // instalarse encima del anterior.
         versionCode = System.getenv("BIBLIOTECAGO_VERSION_CODE")?.toInt() ?: 1
-        versionName = "1.0.3"
+        versionName = "1.0.4"
     }
 
     signingConfigs {

@@ -4,6 +4,8 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
@@ -194,9 +197,28 @@ object EinkNoFling : FlingBehavior {
     override suspend fun ScrollScope.performFling(initialVelocity: Float): Float = 0f
 }
 
-/** Desplazamiento vertical sin inercia ni rebote. */
-fun Modifier.einkVerticalScroll(state: ScrollState): Modifier =
-    verticalScroll(state, flingBehavior = EinkNoFling)
+/**
+ * Desplazamiento vertical a saltos: mientras se arrastra nada se mueve y, al
+ * soltar, el contenido salta de una vez lo arrastrado. Así la pantalla de
+ * tinta se redibuja una sola vez por gesto en vez de dejar estela fotograma a
+ * fotograma. Los toques siguen llegando a lo que haya debajo, y el foco (un
+ * campo de texto con el teclado abierto) sigue pudiendo traerse a la vista.
+ */
+fun Modifier.einkVerticalScroll(state: ScrollState): Modifier = composed {
+    val scope = rememberCoroutineScope()
+    pointerInput(state) {
+        var total = 0f
+        detectVerticalDragGestures(
+            onDragStart = { total = 0f },
+            onDragEnd = { if (total != 0f) scope.launch { state.scrollBy(-total) } },
+            onDragCancel = { total = 0f },
+            onVerticalDrag = { change, dy ->
+                change.consume()
+                total += dy
+            },
+        )
+    }.verticalScroll(state, enabled = false)
+}
 
 /**
  * Contenido largo (una sinopsis) partido en páginas de la altura disponible,
