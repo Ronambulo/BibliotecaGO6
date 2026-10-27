@@ -14,9 +14,7 @@ Android 11+ · Kotlin · Jetpack Compose · OPDS · Readium
 </div>
 
 <p align="center">
-  <img src="docs/img/inicio.webp" width="44%" alt="Pantalla de Inicio: continuar leyendo, libros recientes y estado del servidor">
-  &nbsp;
-  <img src="docs/img/biblioteca.webp" width="44%" alt="Pantalla de Biblioteca: cuadrícula de portadas paginada">
+  <img src="docs/img/inicio.webp" width="100%" alt="Pantalla de Inicio: continuar leyendo, libros recientes y estado del servidor">
 </p>
 <p align="center"><sub><b>Inicio</b> con el libro a medias y lo último añadido · <b>Biblioteca</b> en cuadrícula, paginada y sin scroll</sub></p>
 
