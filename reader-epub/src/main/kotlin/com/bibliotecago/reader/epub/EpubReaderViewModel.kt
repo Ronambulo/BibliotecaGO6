@@ -13,6 +13,7 @@ import com.bibliotecago.library.Bookmark
 import com.bibliotecago.library.bookmarks
 import com.bibliotecago.library.finishedBooks
 import com.bibliotecago.library.readingProgress
+import com.bibliotecago.library.readingSessions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,8 @@ sealed interface ReaderState {
 
 enum class ReaderPanel { None, Text, Contents, Bookmarks, Search }
 
+data class DictionaryLookup(val selection: String, val result: DictionaryResult? = null)
+
 /** Búsqueda en curso: resultados encontrados hasta ahora, en orden de lectura. */
 data class SearchState(
     val query: SearchQuery,
@@ -66,6 +69,8 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
     val title: String = state.get<String>(EXTRA_TITLE).orEmpty()
 
     private val store = application.readingProgress
+
+    private val sessions = application.readingSessions.recorder(bookId, BookFormat.EPUB)
 
     private val _state = MutableStateFlow<ReaderState>(ReaderState.Opening)
     val state: StateFlow<ReaderState> = _state.asStateFlow()
@@ -131,6 +136,7 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
 
     fun onLocatorChanged(locator: Locator) {
         this.locator = locator
+        viewModelScope.launch { sessions.onPosition(locator.locations.totalProgression, locator.locations.position) }
         viewModelScope.launch {
             store.save(
                 bookId, BookFormat.EPUB, locator.toJSON().toString(), locator.locations.totalProgression,
@@ -138,6 +144,17 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
                 pageCount = (state.value as? ReaderState.Ready)?.positionCount,
             )
         }
+    }
+
+    /** El libro vuelve a verse: empieza otra sesión de lectura desde donde estaba. */
+    fun resumeReading() {
+        val here = locator ?: return
+        viewModelScope.launch { sessions.onPosition(here.locations.totalProgression, here.locations.position) }
+    }
+
+    /** El libro deja de verse: se cierra la sesión de lectura. */
+    fun pauseReading() {
+        viewModelScope.launch { sessions.pause() }
     }
 
     /** Marcador de la página que se ve, si lo hay. */
@@ -168,6 +185,21 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
 
     fun deleteBookmark(bookmark: Bookmark) {
         viewModelScope.launch { bookmarkStore.delete(bookmark) }
+    }
+
+    private val dictionary = Dictionary(application)
+
+    /** Consulta del diccionario abierta sobre la página; [DictionaryLookup.result] nulo mientras busca. */
+    var lookup by mutableStateOf<DictionaryLookup?>(null)
+
+    /** Busca lo seleccionado en el diccionario del idioma del libro. */
+    fun lookUp(selection: String) {
+        val publication = (state.value as? ReaderState.Ready)?.publication ?: return
+        lookup = DictionaryLookup(selection.trim())
+        viewModelScope.launch {
+            val result = dictionary.lookUp(selection, publication.metadata.languages.firstOrNull())
+            lookup = if (result == null) null else lookup?.copy(result = result)
+        }
     }
 
     /** Lo escrito en el buscador; se conserva al cerrar el panel. */
@@ -255,6 +287,7 @@ class EpubReaderViewModel(application: Application, state: SavedStateHandle) : A
 
     override fun onCleared() {
         stopSearch()
+        dictionary.close()
         (_state.value as? ReaderState.Ready)?.publication?.close()
     }
 

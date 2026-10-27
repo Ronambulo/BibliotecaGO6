@@ -72,6 +72,7 @@ fun HomeScreen(
     onOpenRecent: () -> Unit,
     onOpenBook: (BookId) -> Unit,
     onOpenServer: () -> Unit,
+    onOpenStats: () -> Unit,
 ) {
     val context = LocalContext.current
     val container = context.appContainer
@@ -158,6 +159,7 @@ fun HomeScreen(
                         )
                     }
                     recentSection()
+                    StatsButton(onOpenStats)
                     Spacer(Modifier.height(16.dp))
                 }
                 // Por si en alguna pantalla no cabe todo: se desplaza a saltos, sin animación.
@@ -181,10 +183,18 @@ fun HomeScreen(
                         }
                     }
                     recentSection()
+                    StatsButton(onOpenStats)
                 }
             }
         }
     }
+}
+
+/** Abajo del todo en Inicio: lleva a las estadísticas de lectura. */
+@Composable
+private fun StatsButton(onClick: () -> Unit) {
+    Spacer(Modifier.height(18.dp))
+    EinkButton("Estadísticas de lectura", onClick = onClick, modifier = Modifier.fillMaxWidth(), icon = EinkIcons.List)
 }
 
 /** El último libro leído, en grande: portada, progreso y «Seguir leyendo». */

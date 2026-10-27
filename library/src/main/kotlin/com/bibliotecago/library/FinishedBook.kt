@@ -19,6 +19,8 @@ data class FinishedBook(
     val finished: Boolean,
     val updatedAt: Long,
     val synced: Boolean,
+    /** Cuándo se terminó; nulo si no se sabe (marcado antes de guardarlo, o desde Calibre-Web sin fecha). */
+    val finishedAt: Long? = null,
 )
 
 @Dao
@@ -28,6 +30,12 @@ internal interface FinishedBookDao {
 
     @Query("SELECT bookId FROM finished_books WHERE finished = 1")
     fun observeIds(): Flow<List<String>>
+
+    @Query("SELECT * FROM finished_books WHERE finished = 1")
+    fun observeFinished(): Flow<List<FinishedBook>>
+
+    @Query("SELECT * FROM finished_books WHERE bookId = :bookId")
+    suspend fun get(bookId: String): FinishedBook?
 
     @Query("SELECT * FROM finished_books WHERE synced = 0 ORDER BY updatedAt")
     fun observePending(): Flow<List<FinishedBook>>
@@ -46,7 +54,9 @@ internal interface FinishedBookDao {
         val local = all().associateBy { it.bookId }
         for (row in local.values) {
             val read = row.bookId in readIds
-            if (row.synced && row.finished != read) upsert(row.copy(finished = read, updatedAt = now))
+            if (row.synced && row.finished != read) {
+                upsert(row.copy(finished = read, updatedAt = now, finishedAt = if (read) now else null))
+            }
         }
         for (id in readIds) {
             if (id !in local) upsert(FinishedBook(id, finished = true, updatedAt = now, synced = true))

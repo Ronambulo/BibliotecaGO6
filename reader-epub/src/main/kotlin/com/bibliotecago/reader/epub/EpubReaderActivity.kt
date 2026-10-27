@@ -4,7 +4,10 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.ActionMode
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
@@ -29,6 +32,8 @@ import com.bibliotecago.core.eink.EinkSegmented
 import com.bibliotecago.core.eink.EinkSurface
 import com.bibliotecago.core.eink.EinkTone
 import com.bibliotecago.core.eink.einkBorder
+import com.bibliotecago.core.eink.einkVerticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,6 +57,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
@@ -147,6 +153,10 @@ class EpubReaderActivity : FragmentActivity() {
         // A pantalla completa: apertura, error o índice.
         val overlay = composeView { Overlay() }
         root.addView(overlay, MATCH_PARENT, MATCH_PARENT)
+        // Definición de la palabra seleccionada, sobre todo lo demás.
+        val definition = composeView { Definition() }
+        definition.visibility = View.GONE
+        root.addView(definition, MATCH_PARENT, MATCH_PARENT)
         setContentView(root)
         hideSystemBars()
 
@@ -158,6 +168,11 @@ class EpubReaderActivity : FragmentActivity() {
                         val fullScreen = panel == ReaderPanel.Contents || panel == ReaderPanel.Bookmarks || panel == ReaderPanel.Search
                         overlay.visibility = if (!ready || fullScreen) View.VISIBLE else View.GONE
                         if (ready) showNavigator()
+                    }
+                }
+                launch {
+                    snapshotFlow { viewModel.lookup != null }.collect {
+                        definition.visibility = if (it) View.VISIBLE else View.GONE
                     }
                 }
                 launch {
@@ -177,11 +192,22 @@ class EpubReaderActivity : FragmentActivity() {
 
         onBackPressedDispatcher.addCallback(this) {
             when {
+                viewModel.lookup != null -> viewModel.lookup = null
                 viewModel.panel != ReaderPanel.None -> viewModel.panel = ReaderPanel.None
                 viewModel.controlsVisible -> viewModel.controlsVisible = false
                 else -> finishWithoutAnimation()
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        viewModel.resumeReading()
+    }
+
+    override fun onStop() {
+        viewModel.pauseReading()
+        super.onStop()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -266,10 +292,35 @@ class EpubReaderActivity : FragmentActivity() {
                     initialLocator = viewModel.locator ?: ready.savedLocator,
                     initialPreferences = viewModel.settings.toPreferences(),
                     listener = navigatorListener,
+                    configuration = EpubNavigatorFragment.Configuration(selectionActionModeCallback = selectionCallback),
                 )
             }
             return factory.instantiate(classLoader, className)
         }
+    }
+
+    /** Menú de la selección: solo buscar en el diccionario. */
+    private val selectionCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            menu.add(Menu.NONE, MENU_DICTIONARY, Menu.NONE, "Diccionario")
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu) = false
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+            if (item.itemId != MENU_DICTIONARY) return false
+            val navigator = navigator() ?: return false
+            lifecycleScope.launch {
+                val text = navigator.currentSelection()?.locator?.text?.highlight
+                mode.finish()
+                navigator.clearSelection()
+                if (!text.isNullOrBlank()) viewModel.lookUp(text)
+            }
+            return true
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) = Unit
     }
 
     private val navigatorListener = object : EpubNavigatorFragment.Listener {
@@ -278,6 +329,76 @@ class EpubReaderActivity : FragmentActivity() {
                 startActivity(Intent(Intent.ACTION_VIEW, url.toString().toUri()))
             } catch (_: ActivityNotFoundException) {
                 // Sin navegador instalado no hay dónde abrirlo.
+            }
+        }
+    }
+
+    /** Hoja con la definición, abajo; tocar fuera la cierra. */
+    @Composable
+    private fun Definition() {
+        val lookup = viewModel.lookup ?: return
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clickable(interactionSource = null, indication = null) { viewModel.lookup = null },
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.6f)
+                    .einkBorder(1.dp, EinkTheme.colors.line, 28.dp)
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .background(EinkTheme.colors.paper)
+                    // Los toques dentro de la hoja no la cierran.
+                    .clickable(interactionSource = null, indication = null) {}
+                    .padding(horizontal = EinkTheme.dimens.gutter, vertical = 16.dp),
+            ) {
+                val result = lookup.result
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        EinkText(result?.query ?: lookup.selection, style = EinkTheme.typography.heading, maxLines = 2)
+                        result?.let {
+                            EinkText(it.language.label, style = EinkTheme.typography.caption, color = EinkTheme.colors.muted)
+                        }
+                    }
+                    EinkIconButton(EinkIcons.Close, "Cerrar diccionario", { viewModel.lookup = null })
+                }
+                Spacer(Modifier.height(12.dp))
+                EinkDivider()
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .einkVerticalScroll(rememberScrollState())
+                        .padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    when {
+                        result == null -> EinkText("Buscando…", color = EinkTheme.colors.muted)
+                        result.entries.isEmpty() -> EinkText(
+                            "No aparece en el diccionario.",
+                            color = EinkTheme.colors.muted,
+                        )
+                        else -> result.entries.forEach { DictionaryEntryView(it) }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun DictionaryEntryView(entry: DictionaryEntry) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            EinkText(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(entry.word) }
+                    append("  ")
+                    withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(entry.partOfSpeech.lowercase()) }
+                },
+                style = EinkTheme.typography.label,
+            )
+            entry.definitions.forEachIndexed { index, definition ->
+                EinkText("${index + 1}. $definition", style = EinkTheme.typography.body)
             }
         }
     }
@@ -307,18 +428,21 @@ class EpubReaderActivity : FragmentActivity() {
     @Composable
     private fun Chrome() {
         if (!viewModel.controlsVisible) return
-        Column(Modifier.fillMaxSize()) {
-            TopStrip()
+        Box(Modifier.fillMaxSize()) {
             Spacer(
                 Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .clickable(interactionSource = null, indication = null) {
                         viewModel.panel = ReaderPanel.None
                         viewModel.controlsVisible = false
                     },
             )
-            Controls()
+            TopStrip()
+            // Bajo la franja de arriba como mucho: si los ajustes de texto no
+            // caben, sus opciones se desplazan dentro de la hoja.
+            Box(Modifier.fillMaxSize().padding(top = TOP_STRIP_HEIGHT + 1.dp), contentAlignment = Alignment.BottomCenter) {
+                Controls()
+            }
         }
     }
 
@@ -333,7 +457,7 @@ class EpubReaderActivity : FragmentActivity() {
             ?.joinToString { it.name }?.ifBlank { null }
         Column(Modifier.fillMaxWidth().background(EinkTheme.colors.paper)) {
             Row(
-                Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp),
+                Modifier.fillMaxWidth().height(TOP_STRIP_HEIGHT).padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 EinkIconButton(EinkIcons.Back, contentDescription = "Cerrar libro", onClick = ::finish)
@@ -374,7 +498,7 @@ class EpubReaderActivity : FragmentActivity() {
         val total = ready?.positionCount ?: 0
         Column(Modifier.fillMaxWidth()) {
             if (viewModel.panel == ReaderPanel.Text) {
-                TextSettings()
+                TextSettings(Modifier.weight(1f, fill = false))
             } else {
                 EinkDivider()
             }
@@ -385,41 +509,8 @@ class EpubReaderActivity : FragmentActivity() {
                     .padding(horizontal = EinkTheme.dimens.gutter)
                     .padding(top = 14.dp, bottom = 12.dp),
             ) {
-                val locator = viewModel.locator
-                EinkText(locator?.title ?: viewModel.title, style = EinkTheme.typography.label, maxLines = 1)
-                val position = locator?.locations?.position
-                val progression = locator?.locations?.totalProgression
-                EinkText(
-                    listOfNotNull(
-                        if (position != null && total > 0) "Pág. $position de $total" else null,
-                        progression?.let { "${(it * 100).roundToInt()} %" },
-                    ).joinToString(" · "),
-                    style = EinkTheme.typography.caption,
-                    color = EinkTheme.colors.muted,
-                )
-                Spacer(Modifier.height(10.dp))
-                val chapter = ready?.let { currentChapter(it) } ?: -1
-                val chapters = ready?.publication?.readingOrder.orEmpty()
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    EinkIconButton(
-                        EinkIcons.ChevronLeft, "Capítulo anterior",
-                        onClick = { chapters.getOrNull(chapter - 1)?.let { navigator()?.go(it, animated = false) } },
-                        enabled = chapter > 0,
-                        size = 40.dp,
-                    )
-                    EinkProgressBar(
-                        (progression ?: 0.0).toFloat(),
-                        Modifier.weight(1f).padding(horizontal = 12.dp),
-                        height = 6.dp,
-                    )
-                    EinkIconButton(
-                        EinkIcons.ChevronRight, "Capítulo siguiente",
-                        onClick = { chapters.getOrNull(chapter + 1)?.let { navigator()?.go(it, animated = false) } },
-                        enabled = chapter >= 0 && chapter < chapters.size - 1,
-                        size = 40.dp,
-                    )
-                }
-                Spacer(Modifier.height(14.dp))
+                // Con los ajustes de texto abiertos, solo las herramientas: sin progreso ni saltos de capítulo.
+                if (viewModel.panel != ReaderPanel.Text) Progress(ready, total)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Tool(EinkIcons.Toc, "Índice") { viewModel.panel = ReaderPanel.Contents }
                     Tool(EinkIcons.Search, "Buscar") { viewModel.panel = ReaderPanel.Search }
@@ -430,6 +521,46 @@ class EpubReaderActivity : FragmentActivity() {
                 }
             }
         }
+    }
+
+    /** Capítulo, página y barra de progreso con saltos al capítulo anterior y siguiente. */
+    @Composable
+    private fun Progress(ready: ReaderState.Ready?, total: Int) {
+        val locator = viewModel.locator
+        EinkText(locator?.title ?: viewModel.title, style = EinkTheme.typography.label, maxLines = 1)
+        val position = locator?.locations?.position
+        val progression = locator?.locations?.totalProgression
+        EinkText(
+            listOfNotNull(
+                if (position != null && total > 0) "Pág. $position de $total" else null,
+                progression?.let { "${(it * 100).roundToInt()} %" },
+            ).joinToString(" · "),
+            style = EinkTheme.typography.caption,
+            color = EinkTheme.colors.muted,
+        )
+        Spacer(Modifier.height(10.dp))
+        val chapter = ready?.let { currentChapter(it) } ?: -1
+        val chapters = ready?.publication?.readingOrder.orEmpty()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            EinkIconButton(
+                EinkIcons.ChevronLeft, "Capítulo anterior",
+                onClick = { chapters.getOrNull(chapter - 1)?.let { navigator()?.go(it, animated = false) } },
+                enabled = chapter > 0,
+                size = 40.dp,
+            )
+            EinkProgressBar(
+                (progression ?: 0.0).toFloat(),
+                Modifier.weight(1f).padding(horizontal = 12.dp),
+                height = 6.dp,
+            )
+            EinkIconButton(
+                EinkIcons.ChevronRight, "Capítulo siguiente",
+                onClick = { chapters.getOrNull(chapter + 1)?.let { navigator()?.go(it, animated = false) } },
+                enabled = chapter >= 0 && chapter < chapters.size - 1,
+                size = 40.dp,
+            )
+        }
+        Spacer(Modifier.height(14.dp))
     }
 
     /** Posición del archivo actual en el orden de lectura. */
@@ -460,10 +591,10 @@ class EpubReaderActivity : FragmentActivity() {
 
     /** Hoja de ajustes de texto, sobre el menú. */
     @Composable
-    private fun TextSettings() {
+    private fun TextSettings(modifier: Modifier) {
         val settings = viewModel.settings
         Column(
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .einkBorder(1.dp, EinkTheme.colors.line, 28.dp)
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
@@ -473,40 +604,53 @@ class EpubReaderActivity : FragmentActivity() {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 EinkText("Texto", Modifier.weight(1f), style = EinkTheme.typography.heading)
+                // El tema en la cabecera: siempre a la vista aunque las opciones no quepan.
+                EinkSegmented(
+                    listOf("Claro", "Oscuro"),
+                    selectedIndex = if (settings.dark) 1 else 0,
+                    onSelect = { viewModel.updateSettings(settings.copy(dark = it == 1)) },
+                    modifier = Modifier.width(180.dp),
+                )
+                Spacer(Modifier.width(12.dp))
                 EinkIconButton(EinkIcons.Close, "Cerrar ajustes de texto", { viewModel.panel = ReaderPanel.None })
             }
             TextPreview(settings)
-            Column {
-                EinkEyebrow("Tamaño de letra")
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    EinkIconButton(
-                        EinkIcons.Minus, "Letra más pequeña", { viewModel.updateSettings(settings.smallerFont()) },
-                        enabled = settings.fontScale > ReaderSettings.MIN_FONT,
-                    )
-                    EinkText(
-                        "${settings.fontPercent} %",
-                        Modifier.weight(1f),
-                        style = EinkTheme.typography.heading,
-                        textAlign = TextAlign.Center,
-                    )
-                    EinkIconButton(
-                        EinkIcons.Plus, "Letra más grande", { viewModel.updateSettings(settings.largerFont()) },
-                        enabled = settings.fontScale < ReaderSettings.MAX_FONT,
-                    )
+            Column(
+                Modifier.weight(1f, fill = false).einkVerticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Column {
+                    EinkEyebrow("Tamaño de letra")
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        EinkIconButton(
+                            EinkIcons.Minus, "Letra más pequeña", { viewModel.updateSettings(settings.smallerFont()) },
+                            enabled = settings.fontScale > ReaderSettings.MIN_FONT,
+                        )
+                        EinkText(
+                            "${settings.fontPercent} %",
+                            Modifier.weight(1f),
+                            style = EinkTheme.typography.heading,
+                            textAlign = TextAlign.Center,
+                        )
+                        EinkIconButton(
+                            EinkIcons.Plus, "Letra más grande", { viewModel.updateSettings(settings.largerFont()) },
+                            enabled = settings.fontScale < ReaderSettings.MAX_FONT,
+                        )
+                    }
                 }
-            }
-            Choice("Letra", ReaderFont.entries.map { it.label to it }, settings.font) {
-                viewModel.updateSettings(settings.copy(font = it))
-            }
-            Choice("Interlineado", ReaderSettings.LINE_HEIGHTS, settings.lineHeight) {
-                viewModel.updateSettings(settings.copy(lineHeight = it))
-            }
-            Choice("Márgenes", ReaderSettings.MARGINS, settings.margins) {
-                viewModel.updateSettings(settings.copy(margins = it))
-            }
-            Choice("Tema", listOf("Claro" to false, "Oscuro" to true), settings.dark) {
-                viewModel.updateSettings(settings.copy(dark = it))
+                Choice("Letra", ReaderFont.entries.map { it.label to it }, settings.font) {
+                    viewModel.updateSettings(settings.copy(font = it))
+                }
+                Choice("Interlineado", ReaderSettings.LINE_HEIGHTS, settings.lineHeight) {
+                    viewModel.updateSettings(settings.copy(lineHeight = it))
+                }
+                Choice("Márgenes", ReaderSettings.MARGINS, settings.margins) {
+                    viewModel.updateSettings(settings.copy(margins = it))
+                }
+                Choice("Párrafos", ParagraphStyle.entries.map { it.label to it }, settings.paragraphs) {
+                    viewModel.updateSettings(settings.copy(paragraphs = it))
+                }
             }
         }
     }
@@ -823,6 +967,8 @@ class EpubReaderActivity : FragmentActivity() {
         private const val NAVIGATOR_TAG = "navigator"
         /** Margen de arriba y de abajo de la página; abajo también va el folio. */
         private const val PAGE_MARGIN_DP = 32
+        private const val MENU_DICTIONARY = 1
+        private val TOP_STRIP_HEIGHT = 72.dp
         private const val TOC_ROWS = 10
         private const val BOOKMARK_ROWS = 6
         private const val SEARCH_ROWS = 6

@@ -39,6 +39,7 @@ import com.bibliotecago.core.eink.EinkIconButton
 import com.bibliotecago.core.eink.EinkSegmented
 import com.bibliotecago.core.eink.EinkSwitch
 import com.bibliotecago.reader.epub.ReaderFont
+import com.bibliotecago.reader.epub.ParagraphStyle
 import com.bibliotecago.reader.epub.ReaderSettings
 import com.bibliotecago.reader.epub.ReaderSettingsStore
 import com.bibliotecago.reader.pdf.PdfFit
@@ -198,6 +199,9 @@ fun ReadingSettingsScreen(onBack: () -> Unit) {
                     Choice("Letra", ReaderFont.entries.map { it.label to it }, epub.font) { updateEpub(epub.copy(font = it)) }
                     Choice("Interlineado", ReaderSettings.LINE_HEIGHTS, epub.lineHeight) { updateEpub(epub.copy(lineHeight = it)) }
                     Choice("Márgenes", ReaderSettings.MARGINS, epub.margins) { updateEpub(epub.copy(margins = it)) }
+                    Choice("Párrafos", ParagraphStyle.entries.map { it.label to it }, epub.paragraphs) {
+                        updateEpub(epub.copy(paragraphs = it))
+                    }
                     Choice("Tema", listOf("Claro" to false, "Oscuro" to true), epub.dark) { updateEpub(epub.copy(dark = it)) }
                 }
             }

@@ -14,6 +14,17 @@ enum class ReaderFont(val label: String, val family: FontFamily?) {
 }
 
 /**
+ * Cómo se distinguen los párrafos. Muchos EPUB quitan la sangría y el espacio
+ * entre párrafos y el punto y aparte no se ve; fuera de «Libro» se fuerza en
+ * todos (en rem, como pide Readium).
+ */
+enum class ParagraphStyle(val label: String, val indent: Double?, val spacing: Double?) {
+    Book("Libro", null, null),
+    Indent("Sangría", 1.5, 0.0),
+    Spaced("Separados", 0.0, 0.75),
+}
+
+/**
  * Ajustes de lectura de EPUB, comunes a todos los libros. Pocas opciones y
  * con valores fijos: en E Ink cada cambio repinta la página entera.
  */
@@ -24,6 +35,7 @@ data class ReaderSettings(
     /** Nulo: el interlineado del libro. */
     val lineHeight: Double? = null,
     val margins: Double = 1.0,
+    val paragraphs: ParagraphStyle = ParagraphStyle.Spaced,
     val dark: Boolean = false,
 ) {
     val fontPercent: Int get() = (fontScale * 100).roundToInt()
@@ -33,9 +45,11 @@ data class ReaderSettings(
         fontFamily = font.family,
         lineHeight = lineHeight,
         pageMargins = margins,
+        paragraphIndent = paragraphs.indent,
+        paragraphSpacing = paragraphs.spacing,
         theme = if (dark) Theme.DARK else Theme.LIGHT,
-        // Readium solo aplica el interlineado propio sin los estilos del editor.
-        publisherStyles = lineHeight == null,
+        // Readium solo aplica el interlineado y los párrafos propios sin los estilos del editor.
+        publisherStyles = lineHeight == null && paragraphs == ParagraphStyle.Book,
         scroll = false,
     )
 
@@ -68,6 +82,7 @@ class ReaderSettingsStore(context: Context) {
         font = ReaderFont.entries.firstOrNull { it.name == prefs.getString(FONT, null) } ?: ReaderFont.Original,
         lineHeight = prefs.getFloat(LINE_HEIGHT, 0f).takeIf { it > 0f }?.toDouble(),
         margins = prefs.getFloat(MARGINS, 1f).toDouble(),
+        paragraphs = ParagraphStyle.entries.firstOrNull { it.name == prefs.getString(PARAGRAPHS, null) } ?: ParagraphStyle.Spaced,
         dark = prefs.getBoolean(DARK, false),
     )
 
@@ -76,6 +91,7 @@ class ReaderSettingsStore(context: Context) {
         putString(FONT, settings.font.name)
         putFloat(LINE_HEIGHT, settings.lineHeight?.toFloat() ?: 0f)
         putFloat(MARGINS, settings.margins.toFloat())
+        putString(PARAGRAPHS, settings.paragraphs.name)
         putBoolean(DARK, settings.dark)
     }
 
@@ -84,6 +100,7 @@ class ReaderSettingsStore(context: Context) {
         const val FONT = "font"
         const val LINE_HEIGHT = "lineHeight"
         const val MARGINS = "margins"
+        const val PARAGRAPHS = "paragraphs"
         const val DARK = "dark"
     }
 }

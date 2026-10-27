@@ -19,6 +19,7 @@ import com.bibliotecago.core.model.BookFormat
 import com.bibliotecago.core.model.BookId
 import com.bibliotecago.library.finishedBooks
 import com.bibliotecago.library.readingProgress
+import com.bibliotecago.library.readingSessions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,6 +61,8 @@ class PdfReaderViewModel(application: Application, state: SavedStateHandle) : An
     val title: String = state.get<String>(EXTRA_TITLE).orEmpty()
 
     private val store = application.readingProgress
+
+    private val sessions = application.readingSessions.recorder(bookId, BookFormat.PDF)
 
     private val finishedStore = application.finishedBooks
 
@@ -356,6 +359,20 @@ class PdfReaderViewModel(application: Application, state: SavedStateHandle) : An
         val page = position.page + 1
         val count = document?.pageCount
         viewModelScope.launch { store.save(bookId, BookFormat.PDF, json, progress, page, count) }
+        viewModelScope.launch { sessions.onPosition(progress, page) }
+    }
+
+    /** El libro vuelve a verse: empieza otra sesión de lectura desde donde estaba. */
+    fun resumeReading() {
+        if (shown == null) return
+        val progress = progression
+        val page = position.page + 1
+        viewModelScope.launch { sessions.onPosition(progress, page) }
+    }
+
+    /** El libro deja de verse: se cierra la sesión de lectura. */
+    fun pauseReading() {
+        viewModelScope.launch { sessions.pause() }
     }
 
     override fun onCleared() {

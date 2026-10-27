@@ -95,6 +95,16 @@ class PdfReaderActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        viewModel.resumeReading()
+    }
+
+    override fun onStop() {
+        viewModel.pauseReading()
+        super.onStop()
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideSystemBars()

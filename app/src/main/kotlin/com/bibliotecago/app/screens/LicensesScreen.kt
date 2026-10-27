@@ -26,6 +26,8 @@ private enum class License(val label: String, val url: String) {
     Bsd3("BSD 3-Clause", "https://opensource.org/license/bsd-3-clause"),
     Mit("MIT", "https://opensource.org/license/mit"),
     Gpl2Classpath("GPL v2 con Classpath Exception", "https://openjdk.org/legal/gplv2+ce.html"),
+    CcBySa4("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/"),
+    WordNet("Licencia de WordNet 3.1", "https://wordnet.princeton.edu/license-and-commercial-use"),
 }
 
 /**
@@ -52,6 +54,14 @@ private val THIRD_PARTY = listOf(
     ThirdParty("Guava", "Google LLC", License.Apache2, "A través de Readium."),
     ThirdParty("Accompanist", "Google LLC", License.Apache2, "A través de Readium."),
     ThirdParty("Koi", "Xiaoke Zhang", License.Apache2, "A través de Readium."),
+    ThirdParty(
+        "Wikcionario en español", "Colaboradores de Wikcionario; extracto de wiktextract (kaikki.org)", License.CcBySa4,
+        "Definiciones del diccionario de castellano del lector. Adaptadas: solo las acepciones, recortadas.",
+    ),
+    ThirdParty(
+        "WordNet 3.1", "Princeton University", License.WordNet,
+        "Definiciones del diccionario de inglés del lector.",
+    ),
     ThirdParty("JSpecify", "The JSpecify Authors", License.Apache2),
     ThirdParty(
         "desugar_jdk_libs", "Oracle y Google LLC", License.Gpl2Classpath,

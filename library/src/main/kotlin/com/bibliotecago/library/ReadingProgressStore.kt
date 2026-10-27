@@ -19,6 +19,7 @@ class LibraryStore internal constructor(database: LibraryDatabase, clock: () -> 
     val progress = ReadingProgressStore(database.progress(), clock)
     val bookmarks = BookmarkStore(database.bookmarks(), clock)
     val finished = FinishedStore(database.finished(), clock)
+    val sessions = ReadingSessionStore(database.sessions(), clock)
 }
 
 internal const val DATABASE_NAME = "library.db"
@@ -79,8 +80,14 @@ class FinishedStore internal constructor(private val dao: FinishedBookDao, priva
     /** Ids de todos los libros leídos. */
     fun observeAll(): Flow<Set<String>> = dao.observeIds().map { it.toSet() }
 
+    /** Los leídos, con la fecha en que se terminaron si se sabe. */
+    fun observeFinished(): Flow<List<FinishedBook>> = dao.observeFinished()
+
     suspend fun set(bookId: BookId, finished: Boolean) {
-        dao.upsert(FinishedBook(bookId.value, finished, clock(), synced = false))
+        val now = clock()
+        // Volver a marcar uno ya leído no cambia cuándo se terminó.
+        val finishedAt = if (finished) dao.get(bookId.value)?.takeIf { it.finished }?.finishedAt ?: now else null
+        dao.upsert(FinishedBook(bookId.value, finished, now, synced = false, finishedAt = finishedAt))
     }
 
     /** Cambios aún sin enviar a Calibre-Web, del más antiguo al más nuevo. */
@@ -116,3 +123,5 @@ val Context.readingProgress: ReadingProgressStore get() = library.progress
 val Context.bookmarks: BookmarkStore get() = library.bookmarks
 
 val Context.finishedBooks: FinishedStore get() = library.finished
+
+val Context.readingSessions: ReadingSessionStore get() = library.sessions
